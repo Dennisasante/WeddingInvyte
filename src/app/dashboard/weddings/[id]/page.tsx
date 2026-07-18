@@ -1,5 +1,6 @@
 import ToggleStatusButton from '@/components/wedding/ToggleStatusButton'
 import { createClient } from '@/lib/supabase/server'
+import WeddingDetailEditor from '@/components/wedding/WeddingDetailEditor'
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import {
@@ -121,8 +122,6 @@ export default async function WeddingDetailPage({
           <WeddingDetailEditor wedding={wedding} />
         </div>
 
-
-      <div className="grid grid-cols-2 gap-6">
         {/* Wedding Info */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
           <h3 className="font-bold text-gray-800 mb-4">Wedding Info</h3>
