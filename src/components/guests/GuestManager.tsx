@@ -133,7 +133,7 @@ export default function GuestManager({ guests: initialGuests, weddingId, tables,
   return (
     <div className="p-8 max-w-6xl mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">Guest List</h1>
           <p className="text-gray-500 text-sm mt-1">{guests.length} total guests</p>
@@ -223,80 +223,92 @@ export default function GuestManager({ guests: initialGuests, weddingId, tables,
       </div>
 
       {/* Table */}
+      {/* Table */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <table className="w-full">
-          <thead>
-            <tr className="bg-gray-50 text-left border-b border-gray-100">
-              {['Guest', 'Contact', 'Type', 'RSVP', 'Actions'].map(h => (
-                <th key={h} className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-50">
-            {filtered.map(guest => (
-              <tr key={guest.id} className="hover:bg-gray-50 transition">
-                <td className="px-6 py-4">
-                  <p className="font-medium text-gray-800">{guest.name}</p>
-                  {guest.notes && (
-                    <p className="text-xs text-gray-400 mt-0.5 truncate max-w-32">{guest.notes}</p>
-                  )}
-                </td>
-                <td className="px-6 py-4">
-                  <p className="text-sm text-gray-600">{guest.email || '—'}</p>
-                  <p className="text-xs text-gray-400">{guest.phone || ''}</p>
-                </td>
-                <td className="px-6 py-4">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${guest.category === 'couple'
-                    ? 'bg-pink-50 text-pink-700'
-                    : guest.category === 'plus_one'
-                      ? 'bg-purple-50 text-purple-700'
-                      : 'bg-blue-50 text-blue-700'
-                    }`}>
-                    {guest.category}
-                  </span>
-                </td>
-                <td className="px-6 py-4">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${RSVP_COLORS[guest.rsvp_status] || 'bg-gray-100 text-gray-600'}`}>
-                    {RSVP_LABELS[guest.rsvp_status] || guest.rsvp_status}
-                  </span>
-                </td>
-                <td className="px-6 py-4 text-sm text-gray-500">
-                  {guest.allow_plus_one ? (
-                    <span className="text-green-600 text-xs font-medium">✓ Allowed</span>
-                  ) : (
-                    <span className="text-gray-300 text-xs">—</span>
-                  )}
-                </td>
-                <td className="px-6 py-4">
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={() => handleDelete(guest.id)}
-                      className="text-gray-300 hover:text-red-500 transition"
-                      title="Remove guest"
-                    >
-                      <Trash2 size={15} />
-                    </button>
-                  </div>
-                </td>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[600px]">
+            <thead>
+              <tr className="bg-gray-50 text-left border-b border-gray-100">
+                {['Guest', 'Contact', 'Type', 'RSVP', 'Actions'].map(h => (
+                  <th key={h} className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                    {h}
+                  </th>
+                ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
 
-        {filtered.length === 0 && (
-          <div className="text-center py-12 text-gray-400">
-            <UserCheck size={32} className="mx-auto mb-3 opacity-30" />
-            <p className="font-medium">No guests found</p>
-            <p className="text-sm mt-1">
-              {guests.length === 0
-                ? 'Add your first guest to get started'
-                : 'Try adjusting your search or filter'}
-            </p>
-          </div>
-        )}
+            <tbody className="divide-y divide-gray-50">
+              {filtered.map(guest => (
+                <tr key={guest.id} className="hover:bg-gray-50 transition">
+                  <td className="px-6 py-4">
+                    <p className="font-medium text-gray-800">{guest.name}</p>
+                    {guest.notes && (
+                      <p className="text-xs text-gray-400 mt-0.5 truncate max-w-32">
+                        {guest.notes}
+                      </p>
+                    )}
+                  </td>
+
+                  <td className="px-6 py-4">
+                    <p className="text-sm text-gray-600">{guest.email || '—'}</p>
+                    <p className="text-xs text-gray-400">{guest.phone || ''}</p>
+                  </td>
+
+                  <td className="px-6 py-4">
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${guest.category === 'couple'
+                      ? 'bg-pink-50 text-pink-700'
+                      : guest.category === 'plus_one'
+                        ? 'bg-purple-50 text-purple-700'
+                        : 'bg-blue-50 text-blue-700'
+                      }`}>
+                      {guest.category}
+                    </span>
+                  </td>
+
+                  <td className="px-6 py-4">
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${RSVP_COLORS[guest.rsvp_status] || 'bg-gray-100 text-gray-600'
+                      }`}>
+                      {RSVP_LABELS[guest.rsvp_status] || guest.rsvp_status}
+                    </span>
+                  </td>
+
+                  <td className="px-6 py-4 text-sm text-gray-500">
+                    {guest.allow_plus_one ? (
+                      <span className="text-green-600 text-xs font-medium">✓ Allowed</span>
+                    ) : (
+                      <span className="text-gray-300 text-xs">—</span>
+                    )}
+                  </td>
+
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => handleDelete(guest.id)}
+                        className="text-gray-300 hover:text-red-500 transition"
+                        title="Remove guest"
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
+
+      {filtered.length === 0 && (
+        <div className="text-center py-12 text-gray-400">
+          <UserCheck size={32} className="mx-auto mb-3 opacity-30" />
+          <p className="font-medium">No guests found</p>
+          <p className="text-sm mt-1">
+            {guests.length === 0
+              ? 'Add your first guest to get started'
+              : 'Try adjusting your search or filter'}
+          </p>
+        </div>
+      )}
 
       {/* Modals */}
       {showAddModal && (
@@ -306,6 +318,7 @@ export default function GuestManager({ guests: initialGuests, weddingId, tables,
           onGuestAdded={handleGuestAdded}
         />
       )}
+
       {showCSVModal && (
         <CSVImportModal
           weddingId={weddingId}

@@ -129,7 +129,7 @@ export default function CoupleAdminDashboard({ profile, wedding, guests }: Props
 
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
         {[
           { label: 'Total Guests', value: totalGuests, icon: Users },
           { label: 'Responded', value: `${responded} (${rsvpRate}%)`, icon: CheckCircle },
@@ -214,7 +214,7 @@ export default function CoupleAdminDashboard({ profile, wedding, guests }: Props
 </div>
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
 
         {[
           {

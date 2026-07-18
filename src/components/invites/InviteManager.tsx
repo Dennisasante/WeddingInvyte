@@ -31,16 +31,16 @@ interface Props {
 }
 
 const STATUS_STYLES: Record<string, string> = {
-  pending:   'bg-gray-100 text-gray-500',
-  sent:      'bg-amber-50 text-amber-700',
-  opened:    'bg-blue-50 text-blue-700',
+  pending: 'bg-gray-100 text-gray-500',
+  sent: 'bg-amber-50 text-amber-700',
+  opened: 'bg-blue-50 text-blue-700',
   responded: 'bg-green-50 text-green-700',
 }
 
 const STATUS_ICONS: Record<string, React.ReactNode> = {
-  pending:   <Clock size={10} />,
-  sent:      <Send size={10} />,
-  opened:    <Eye size={10} />,
+  pending: <Clock size={10} />,
+  sent: <Send size={10} />,
+  opened: <Eye size={10} />,
   responded: <CheckCircle size={10} />,
 }
 
@@ -73,54 +73,54 @@ export default function InviteManager({ wedding, guests }: Props) {
   }
 
   const shareWhatsApp = (guest: Guest) => {
-  const link = getRsvpLink(guest.invite_token)
-  const weddingDate = wedding?.event_date
-    ? new Date(wedding.event_date).toLocaleDateString('en-US', {
+    const link = getRsvpLink(guest.invite_token)
+    const weddingDate = wedding?.event_date
+      ? new Date(wedding.event_date).toLocaleDateString('en-US', {
         weekday: 'long', month: 'long',
         day: 'numeric', year: 'numeric'
       })
-    : ''
+      : ''
 
-  // Build the message first without encoding
-  const lines = [
-    `Dear ${guest.name}, 💍`,
-    ``,
-    `You are cordially invited to celebrate the wedding of`,
-    `*${wedding?.couple_names}*`,
-    weddingDate ? `📅 ${weddingDate}` : '',
-    wedding?.venue_name ? `📍 ${wedding.venue_name}` : '',
-    ``,
-    `Please RSVP by tapping the link below:`,
-    link,
-    ``,
-    `We look forward to celebrating with you! 🎊`,
-  ].filter(line => line !== null && line !== undefined)
+    // Build the message first without encoding
+    const lines = [
+      `Dear ${guest.name}, 💍`,
+      ``,
+      `You are cordially invited to celebrate the wedding of`,
+      `*${wedding?.couple_names}*`,
+      weddingDate ? `📅 ${weddingDate}` : '',
+      wedding?.venue_name ? `📍 ${wedding.venue_name}` : '',
+      ``,
+      `Please RSVP by tapping the link below:`,
+      link,
+      ``,
+      `We look forward to celebrating with you! 🎊`,
+    ].filter(line => line !== null && line !== undefined)
 
-  const message = lines.join('\n')
+    const message = lines.join('\n')
 
-  // Use encodeURIComponent but it handles emojis fine in modern browsers
-  // The issue is WhatsApp desktop vs mobile rendering
-  const encoded = encodeURIComponent(message)
+    // Use encodeURIComponent but it handles emojis fine in modern browsers
+    // The issue is WhatsApp desktop vs mobile rendering
+    const encoded = encodeURIComponent(message)
 
-  if (guest.phone) {
-    let cleaned = guest.phone.replace(/\D/g, '')
-    if (cleaned.startsWith('0') && cleaned.length === 10) {
-      cleaned = '233' + cleaned.substring(1)
+    if (guest.phone) {
+      let cleaned = guest.phone.replace(/\D/g, '')
+      if (cleaned.startsWith('0') && cleaned.length === 10) {
+        cleaned = '233' + cleaned.substring(1)
+      }
+      if (cleaned.length === 9) {
+        cleaned = '233' + cleaned
+      }
+      window.open(`https://wa.me/${cleaned}?text=${encoded}`, '_blank')
+    } else {
+      window.open(`https://wa.me/?text=${encoded}`, '_blank')
     }
-    if (cleaned.length === 9) {
-      cleaned = '233' + cleaned
-    }
-    window.open(`https://wa.me/${cleaned}?text=${encoded}`, '_blank')
-  } else {
-    window.open(`https://wa.me/?text=${encoded}`, '_blank')
+
+    supabase
+      .from('guests')
+      .update({ invite_status: 'sent' })
+      .eq('id', guest.id)
+      .then(() => null)
   }
-
-  supabase
-    .from('guests')
-    .update({ invite_status: 'sent' })
-    .eq('id', guest.id)
-    .then(() => null)
-}
 
   const sendEmailInvites = async () => {
     if (!selected.length || !wedding) return
@@ -153,9 +153,9 @@ export default function InviteManager({ wedding, guests }: Props) {
   }
 
   const stats = {
-    total:     guests.length,
-    sent:      guests.filter(g => g.invite_status === 'sent').length,
-    opened:    guests.filter(g => g.invite_status === 'opened').length,
+    total: guests.length,
+    sent: guests.filter(g => g.invite_status === 'sent').length,
+    opened: guests.filter(g => g.invite_status === 'opened').length,
     responded: guests.filter(g => g.invite_status === 'responded').length,
   }
 
@@ -200,7 +200,7 @@ export default function InviteManager({ wedding, guests }: Props) {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-4 gap-3 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
         {[
           { label: 'Total', value: stats.total },
           { label: 'Sent', value: stats.sent },
@@ -243,108 +243,109 @@ export default function InviteManager({ wedding, guests }: Props) {
           </span>
         </div>
 
-        <table className="w-full">
-          <thead>
-            <tr className="text-left border-b border-gray-100">
-              {['', 'Guest', 'Contact', 'Status', 'RSVP', 'Actions'].map(h => (
-                <th
-                  key={h}
-                  className="px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide"
-                >
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-50">
-            {guests.map(guest => (
-              <tr key={guest.id} className="hover:bg-gray-50 transition">
-                <td className="px-5 py-4">
-                  {guest.email && (
-                    <input
-                      type="checkbox"
-                      checked={selected.includes(guest.id)}
-                      onChange={() => toggleSelect(guest.id)}
-                      className="w-4 h-4 rounded accent-amber-500"
-                    />
-                  )}
-                </td>
-                <td className="px-5 py-4">
-                  <p className="font-medium text-gray-800">{guest.name}</p>
-                </td>
-                <td className="px-5 py-4">
-                  {guest.phone && (
-                    <p className="text-xs text-green-600 flex items-center gap-1">
-                      <MessageCircle size={11} />
-                      {guest.phone}
-                    </p>
-                  )}
-                  {guest.email && (
-                    <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5">
-                      <Mail size={11} />
-                      {guest.email}
-                    </p>
-                  )}
-                  {!guest.phone && !guest.email && (
-                    <p className="text-xs text-gray-300">No contact info</p>
-                  )}
-                </td>
-                <td className="px-5 py-4">
-                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${STATUS_STYLES[guest.invite_status] || STATUS_STYLES.pending}`}>
-                    {STATUS_ICONS[guest.invite_status]}
-                    {guest.invite_status || 'pending'}
-                  </span>
-                </td>
-                <td className="px-5 py-4">
-                  <span className={`text-xs font-medium ${
-                    guest.rsvp_status === 'yes' || guest.rsvp_status === 'yes_joy'
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[600px]">
+            <thead>
+              <tr className="text-left border-b border-gray-100">
+                {['', 'Guest', 'Contact', 'Status', 'RSVP', 'Actions'].map(h => (
+                  <th
+                    key={h}
+                    className="px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide"
+                  >
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {guests.map(guest => (
+                <tr key={guest.id} className="hover:bg-gray-50 transition">
+                  <td className="px-5 py-4">
+                    {guest.email && (
+                      <input
+                        type="checkbox"
+                        checked={selected.includes(guest.id)}
+                        onChange={() => toggleSelect(guest.id)}
+                        className="w-4 h-4 rounded accent-amber-500"
+                      />
+                    )}
+                  </td>
+                  <td className="px-5 py-4">
+                    <p className="font-medium text-gray-800">{guest.name}</p>
+                  </td>
+                  <td className="px-5 py-4">
+                    {guest.phone && (
+                      <p className="text-xs text-green-600 flex items-center gap-1">
+                        <MessageCircle size={11} />
+                        {guest.phone}
+                      </p>
+                    )}
+                    {guest.email && (
+                      <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5">
+                        <Mail size={11} />
+                        {guest.email}
+                      </p>
+                    )}
+                    {!guest.phone && !guest.email && (
+                      <p className="text-xs text-gray-300">No contact info</p>
+                    )}
+                  </td>
+                  <td className="px-5 py-4">
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${STATUS_STYLES[guest.invite_status] || STATUS_STYLES.pending}`}>
+                      {STATUS_ICONS[guest.invite_status]}
+                      {guest.invite_status || 'pending'}
+                    </span>
+                  </td>
+                  <td className="px-5 py-4">
+                    <span className={`text-xs font-medium ${guest.rsvp_status === 'yes' || guest.rsvp_status === 'yes_joy'
                       ? 'text-green-600'
                       : guest.rsvp_status === 'no' || guest.rsvp_status === 'from_afar'
-                      ? 'text-red-500'
-                      : 'text-gray-400'
-                  }`}>
-                    {guest.rsvp_status === 'pending' ? '—' : guest.rsvp_status}
-                  </span>
-                </td>
-                <td className="px-5 py-4">
-                  <div className="flex items-center gap-2">
-                    {/* WhatsApp */}
-                    <button
-                      onClick={() => shareWhatsApp(guest)}
-                      className="w-8 h-8 flex items-center justify-center rounded-lg bg-green-50 text-green-600 hover:bg-green-100 transition"
-                      title={guest.phone
-                        ? `Send WhatsApp to ${guest.phone}`
-                        : 'Share via WhatsApp'}
-                    >
-                      <MessageCircle size={15} />
-                    </button>
+                        ? 'text-red-500'
+                        : 'text-gray-400'
+                      }`}>
+                      {guest.rsvp_status === 'pending' ? '—' : guest.rsvp_status}
+                    </span>
+                  </td>
+                  <td className="px-5 py-4">
+                    <div className="flex items-center gap-2">
+                      {/* WhatsApp */}
+                      <button
+                        onClick={() => shareWhatsApp(guest)}
+                        className="w-8 h-8 flex items-center justify-center rounded-lg bg-green-50 text-green-600 hover:bg-green-100 transition"
+                        title={guest.phone
+                          ? `Send WhatsApp to ${guest.phone}`
+                          : 'Share via WhatsApp'}
+                      >
+                        <MessageCircle size={15} />
+                      </button>
 
-                    {/* Copy link */}
-                    <button
-                      onClick={() => copyLink(guest)}
-                      className="w-8 h-8 flex items-center justify-center rounded-lg bg-gray-50 text-gray-400 hover:bg-amber-50 hover:text-amber-600 transition"
-                      title="Copy RSVP link"
-                    >
-                      {copiedId === guest.id
-                        ? <CheckCircle size={15} className="text-green-500" />
-                        : <Link2 size={15} />
-                      }
-                    </button>
+                      {/* Copy link */}
+                      <button
+                        onClick={() => copyLink(guest)}
+                        className="w-8 h-8 flex items-center justify-center rounded-lg bg-gray-50 text-gray-400 hover:bg-amber-50 hover:text-amber-600 transition"
+                        title="Copy RSVP link"
+                      >
+                        {copiedId === guest.id
+                          ? <CheckCircle size={15} className="text-green-500" />
+                          : <Link2 size={15} />
+                        }
+                      </button>
 
-                    {/* QR Code */}
-                    <button
-                      onClick={() => setQrGuest(guest)}
-                      className="w-8 h-8 flex items-center justify-center rounded-lg bg-gray-50 text-gray-400 hover:bg-amber-50 hover:text-amber-600 transition"
-                      title="Show QR code"
-                    >
-                      <QrCode size={15} />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                      {/* QR Code */}
+                      <button
+                        onClick={() => setQrGuest(guest)}
+                        className="w-8 h-8 flex items-center justify-center rounded-lg bg-gray-50 text-gray-400 hover:bg-amber-50 hover:text-amber-600 transition"
+                        title="Show QR code"
+                      >
+                        <QrCode size={15} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
 
         {guests.length === 0 && (
           <div className="text-center py-12 text-gray-400">

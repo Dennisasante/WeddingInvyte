@@ -266,8 +266,8 @@ export default function RSVPManager({
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2 ${activeTab === tab.key
-                ? 'bg-white text-gray-800 shadow-sm'
-                : 'text-gray-500 hover:text-gray-700'
+              ? 'bg-white text-gray-800 shadow-sm'
+              : 'text-gray-500 hover:text-gray-700'
               }`}
           >
             {tab.label}
@@ -275,8 +275,8 @@ export default function RSVPManager({
             {tab.count > 0 && (
               <span
                 className={`text-xs px-1.5 py-0.5 rounded-full font-bold ${activeTab === tab.key
-                    ? 'bg-amber-100 text-amber-700'
-                    : 'bg-gray-200 text-gray-600'
+                  ? 'bg-amber-100 text-amber-700'
+                  : 'bg-gray-200 text-gray-600'
                   }`}
               >
                 {tab.count}
@@ -291,304 +291,175 @@ export default function RSVPManager({
       {/* RSVP Responses Tab */}
       {activeTab === 'responses' && (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[700px]">
 
-          <table className="w-full">
+              
 
-            <thead>
-              <tr className="bg-gray-50 border-b border-gray-100 text-left">
+            </table>
+          </div>
+                </div>
+      )}
 
-                {[
-                  'Guest',
-                  'Response',
-                  'Dietary',
-                  'Message',
-                  'Responded'
-                ].map(h => (
-                  <th
-                    key={h}
-                    className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide"
-                  >
-                    {h}
-                  </th>
-                ))}
+      {guests.length === 0 && (
+        <div className="text-center py-12 text-gray-400">
 
-              </tr>
-            </thead>
-
-
-            <tbody className="divide-y divide-gray-50">
-
-              {guests.map(guest => (
-
-                <tr
-                  key={guest.id}
-                  className="hover:bg-gray-50 transition"
-                >
-
-                  <td className="px-6 py-4">
-
-                    <p className="font-medium text-gray-800">
-                      {guest.name}
-                    </p>
-
-                    {guest.email && (
-                      <p className="text-xs text-gray-400">
-                        {guest.email}
-                      </p>
-                    )}
-
-                    {guest.category === 'couple' &&
-                      guest.couple_attendance && (
-                        <p className="text-xs text-purple-500 mt-0.5">
-                          {
-                            guest.couple_attendance === 'both'
-                              ? 'Both attending'
-                              : guest.couple_attendance === 'mr'
-                                ? 'Mr only'
-                                : 'Mrs only'
-                          }
-                        </p>
-                      )}
-
-                  </td>
-
-
-                  <td className="px-6 py-4">
-
-                    <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${RSVP_COLORS[guest.rsvp_status]
-                        }`}
-                    >
-                      {RSVP_LABELS[guest.rsvp_status]}
-                    </span>
-
-                  </td>
-
-
-                  <td className="px-6 py-4 text-sm text-gray-500 max-w-32">
-
-                    <span className="truncate block">
-                      {guest.dietary_restrictions || '—'}
-                    </span>
-
-                  </td>
-
-
-                  <td className="px-6 py-4">
-
-                    {guest.guest_message ? (
-
-                      <div
-                        className="flex items-center gap-1 text-amber-600"
-                        title={guest.guest_message}
-                      >
-
-                        <MessageSquare size={14} />
-
-                        <span className="text-xs truncate max-w-24">
-                          {guest.guest_message}
-                        </span>
-
-                      </div>
-
-                    ) : (
-
-                      <span className="text-gray-300 text-xs">
-                        —
-                      </span>
-
-                    )}
-
-                  </td>
-
-
-                  <td className="px-6 py-4 text-xs text-gray-400">
-
-                    {guest.responded_at
-                      ? new Date(
-                        guest.responded_at
-                      ).toLocaleDateString(
-                        'en-US',
-                        {
-                          month: 'short',
-                          day: 'numeric'
-                        }
-                      )
-                      : '—'
-                    }
-
-                  </td>
-
-                </tr>
-
-              ))}
-
-            </tbody>
-
-          </table>
-
-
-          {guests.length === 0 && (
-            <div className="text-center py-12 text-gray-400">
-
-              <Users
-                size={32}
-                className="mx-auto mb-3 opacity-30"
-              />
-
-              <p>
-                No guests yet
-              </p>
-
-            </div>
-          )}
-
+          <Users
+            size={32}
+            className="mx-auto mb-3 opacity-30"
+          />
+          <p>
+            No guests yet
+          </p>
         </div>
       )}
 
 
 
       {/* Plus One Requests Tab */}
-      {activeTab === 'plusone' && (
+      {
+        activeTab === 'plusone' && (
 
-        <div className="space-y-3">
-
-
-          {plusOneRequests.length === 0 && (
-
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-12 text-center text-gray-400">
-
-              <Users
-                size={32}
-                className="mx-auto mb-3 opacity-30"
-              />
-
-              <p>
-                No plus one requests yet
-              </p>
-
-            </div>
-
-          )}
+          <div className="space-y-3">
 
 
+            {plusOneRequests.length === 0 && (
 
-          {plusOneRequests.map(request => (
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-12 text-center text-gray-400">
 
-            <div
-              key={request.id}
-              className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex items-center justify-between"
-            >
+                <Users
+                  size={32}
+                  className="mx-auto mb-3 opacity-30"
+                />
 
-              <div>
-
-                <p className="font-medium text-gray-800">
-                  {request.guests?.name}
-                </p>
-
-                <p className="text-sm text-gray-400">
-                  {request.guests?.email || 'No email'}
-                </p>
-
-
-                <p className="text-xs text-gray-400 mt-1">
-
-                  Requested{' '}
-
-                  {new Date(
-                    request.requested_at
-                  ).toLocaleDateString(
-                    'en-US',
-                    {
-                      month: 'short',
-                      day: 'numeric',
-                      year: 'numeric'
-                    }
-                  )}
-
+                <p>
+                  No plus one requests yet
                 </p>
 
               </div>
 
+            )}
 
 
-              <div className="flex items-center gap-3">
 
-                {request.status === 'pending' ? (
+            {plusOneRequests.map(request => (
 
-                  <>
+              <div
+                key={request.id}
+                className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex items-center justify-between"
+              >
 
-                    <button
-                      onClick={() =>
-                        handlePlusOneDecision(
-                          request.id,
-                          'declined'
-                        )
+                <div>
+
+                  <p className="font-medium text-gray-800">
+                    {request.guests?.name}
+                  </p>
+
+                  <p className="text-sm text-gray-400">
+                    {request.guests?.email || 'No email'}
+                  </p>
+
+
+                  <p className="text-xs text-gray-400 mt-1">
+
+                    Requested{' '}
+
+                    {new Date(
+                      request.requested_at
+                    ).toLocaleDateString(
+                      'en-US',
+                      {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric'
                       }
-                      disabled={
-                        processingId === request.id
-                      }
-                      className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border border-red-200 text-red-600 hover:bg-red-50 transition disabled:opacity-50"
-                    >
+                    )}
 
-                      <XCircle size={15} />
+                  </p>
 
-                      Decline
-
-                    </button>
+                </div>
 
 
 
-                    <button
-                      onClick={() =>
-                        handlePlusOneDecision(
-                          request.id,
-                          'approved'
-                        )
-                      }
-                      disabled={
-                        processingId === request.id
-                      }
-                      className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium bg-green-500 hover:bg-green-600 text-white transition disabled:opacity-50"
-                    >
+                <div className="flex items-center gap-3">
 
-                      <CheckCircle size={15} />
+                  {request.status === 'pending' ? (
 
-                      Approve
+                    <>
 
-                    </button>
+                      <button
+                        onClick={() =>
+                          handlePlusOneDecision(
+                            request.id,
+                            'declined'
+                          )
+                        }
+                        disabled={
+                          processingId === request.id
+                        }
+                        className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border border-red-200 text-red-600 hover:bg-red-50 transition disabled:opacity-50"
+                      >
 
-                  </>
+                        <XCircle size={15} />
+
+                        Decline
+
+                      </button>
 
 
-                ) : (
 
-                  <span
-                    className={`px-3 py-1.5 rounded-full text-xs font-medium ${request.status === 'approved'
+                      <button
+                        onClick={() =>
+                          handlePlusOneDecision(
+                            request.id,
+                            'approved'
+                          )
+                        }
+                        disabled={
+                          processingId === request.id
+                        }
+                        className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium bg-green-500 hover:bg-green-600 text-white transition disabled:opacity-50"
+                      >
+
+                        <CheckCircle size={15} />
+
+                        Approve
+
+                      </button>
+
+                    </>
+
+
+                  ) : (
+
+                    <span
+                      className={`px-3 py-1.5 rounded-full text-xs font-medium ${request.status === 'approved'
                         ? 'bg-green-50 text-green-700'
                         : 'bg-red-50 text-red-600'
-                      }`}
-                  >
+                        }`}
+                    >
 
-                    {request.status === 'approved'
-                      ? '✓ Approved'
-                      : '✗ Declined'
-                    }
+                      {request.status === 'approved'
+                        ? '✓ Approved'
+                        : '✗ Declined'
+                      }
 
-                  </span>
+                    </span>
 
-                )}
+                  )}
+
+                </div>
 
               </div>
 
-            </div>
+            ))}
 
-          ))}
+          </div>
 
-        </div>
+        )
+      }
 
-      )}
-
-    </div>
+    </div >
   )
 }
+

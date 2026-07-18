@@ -238,7 +238,7 @@ export default function WeddingEditor({ wedding }: { wedding: Wedding }) {
             {field('Couple Names', 'couple_names', {
               placeholder: 'Emma & James'
             })}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {field('Wedding Date', 'event_date', { type: 'date' })}
               {field('RSVP Deadline', 'rsvp_deadline', { type: 'date' })}
             </div>
@@ -361,7 +361,7 @@ export default function WeddingEditor({ wedding }: { wedding: Wedding }) {
           <p className="text-sm text-gray-500 mb-3">
             {form.theme_preset === 'custom' ? 'Set your custom colors' : 'Fine-tune colors'}
           </p>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {[
               { label: 'Primary', key: 'primary_color' as const },
               { label: 'Secondary', key: 'secondary_color' as const },

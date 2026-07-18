@@ -26,14 +26,30 @@ export async function middleware(request: NextRequest) {
   )
 
   const { data: { user } } = await supabase.auth.getUser()
+  const { pathname } = request.nextUrl
 
-  // Protect dashboard routes
-  if (!user && request.nextUrl.pathname.startsWith('/dashboard')) {
+  // These paths are ALWAYS public — never redirect
+  const publicPaths = [
+    '/login',
+    '/signup',
+    '/rsvp',
+    '/wedding',
+    '/auth',
+    '/api/rsvp',
+    '/api/log-activity',
+    '/_next',
+    '/favicon.ico',
+  ]
+
+  const isPublic = publicPaths.some(p => pathname.startsWith(p))
+
+  // Only protect dashboard routes
+  if (!isPublic && pathname.startsWith('/dashboard') && !user) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  // Redirect logged in users away from login
-  if (user && request.nextUrl.pathname === '/login') {
+  // Redirect logged in users away from login/signup
+  if (user && (pathname === '/login' || pathname === '/signup')) {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
@@ -42,6 +58,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|rsvp|api|wedding).*)',
+    '/((?!_next/static|_next/image|favicon.ico).*)',
   ],
 }
