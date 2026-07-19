@@ -15,6 +15,7 @@ interface Guest {
 interface Wedding {
   id: string
   couple_names: string
+  couple_photo_url: string | null
   event_date: string | null
   venue_name: string | null
   venue_address: string | null
@@ -220,6 +221,20 @@ export default function RSVPForm({ guest, wedding }: Props) {
             )}
 
             <div className="p-6 text-center" style={{ backgroundColor: secondary }}>
+
+              {/* Couple Photo */}
+              {wedding.couple_photo_url && (
+                <div className="flex justify-center mb-4 -mt-12">
+                  <div className="w-24 h-24 rounded-full border-4 border-white shadow-lg overflow-hidden">
+                    <img
+                      src={wedding.couple_photo_url}
+                      alt="The couple"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                </div>
+              )}
+
               <div className="flex items-center gap-3 mb-4">
                 <div className="flex-1 h-px" style={{ backgroundColor: `${primary}40` }} />
                 <span style={{ color: primary }}>✦</span>
@@ -426,10 +441,10 @@ export default function RSVPForm({ guest, wedding }: Props) {
                     style={
                       coupleAttendance === opt.value
                         ? {
-                            borderColor: primary,
-                            backgroundColor: primary,
-                            color: 'white',
-                          }
+                          borderColor: primary,
+                          backgroundColor: primary,
+                          color: 'white',
+                        }
                         : { borderColor: '#e5e7eb', color: '#6b7280' }
                     }
                   >
@@ -451,15 +466,15 @@ export default function RSVPForm({ guest, wedding }: Props) {
                 style={
                   response === opt.key
                     ? {
-                        borderColor: primary,
-                        backgroundColor: primary,
-                        color: 'white',
-                      }
+                      borderColor: primary,
+                      backgroundColor: primary,
+                      color: 'white',
+                    }
                     : {
-                        borderColor: '#f3f4f6',
-                        backgroundColor: '#f9fafb',
-                        color: '#374151',
-                      }
+                      borderColor: '#f3f4f6',
+                      backgroundColor: '#f9fafb',
+                      color: '#374151',
+                    }
                 }
               >
                 <span className="text-xl">{opt.emoji}</span>
@@ -532,8 +547,8 @@ export default function RSVPForm({ guest, wedding }: Props) {
             {isDeadlinePassed
               ? 'RSVP Deadline Passed'
               : loading
-              ? 'Sending RSVP...'
-              : 'Send RSVP 💌'}
+                ? 'Sending RSVP...'
+                : 'Send RSVP 💌'}
           </button>
         </div>
 
