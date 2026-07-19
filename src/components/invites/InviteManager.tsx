@@ -73,54 +73,49 @@ export default function InviteManager({ wedding, guests }: Props) {
   }
 
   const shareWhatsApp = (guest: Guest) => {
-    const link = getRsvpLink(guest.invite_token)
-    const weddingDate = wedding?.event_date
-      ? new Date(wedding.event_date).toLocaleDateString('en-US', {
+  const link = getRsvpLink(guest.invite_token)
+  const weddingDate = wedding?.event_date
+    ? new Date(wedding.event_date).toLocaleDateString('en-US', {
         weekday: 'long', month: 'long',
         day: 'numeric', year: 'numeric'
       })
-      : ''
+    : ''
 
-    // Build the message first without encoding
-    const lines = [
-      `Dear ${guest.name}, 💍`,
-      ``,
-      `You are cordially invited to celebrate the wedding of`,
-      `*${wedding?.couple_names}*`,
-      weddingDate ? `📅 ${weddingDate}` : '',
-      wedding?.venue_name ? `📍 ${wedding.venue_name}` : '',
-      ``,
-      `Please RSVP by tapping the link below:`,
-      link,
-      ``,
-      `We look forward to celebrating with you! 🎊`,
-    ].filter(line => line !== null && line !== undefined)
+  const lines = [
+    `Dear ${guest.name},`,
+    ``,
+    `You are cordially invited to the wedding of`,
+    `*${wedding?.couple_names}*`,
+    weddingDate ? `Date: ${weddingDate}` : '',
+    wedding?.venue_name ? `Venue: ${wedding.venue_name}` : '',
+    ``,
+    `Kindly RSVP by tapping the link below:`,
+    link,
+    ``,
+    `We look forward to celebrating with you!`,
+  ].filter(Boolean)
 
-    const message = lines.join('\n')
+  const encoded = encodeURIComponent(lines.join('\n'))
 
-    // Use encodeURIComponent but it handles emojis fine in modern browsers
-    // The issue is WhatsApp desktop vs mobile rendering
-    const encoded = encodeURIComponent(message)
-
-    if (guest.phone) {
-      let cleaned = guest.phone.replace(/\D/g, '')
-      if (cleaned.startsWith('0') && cleaned.length === 10) {
-        cleaned = '233' + cleaned.substring(1)
-      }
-      if (cleaned.length === 9) {
-        cleaned = '233' + cleaned
-      }
-      window.open(`https://wa.me/${cleaned}?text=${encoded}`, '_blank')
-    } else {
-      window.open(`https://wa.me/?text=${encoded}`, '_blank')
+  if (guest.phone) {
+    let cleaned = guest.phone.replace(/\D/g, '')
+    if (cleaned.startsWith('0') && cleaned.length === 10) {
+      cleaned = '233' + cleaned.substring(1)
     }
-
-    supabase
-      .from('guests')
-      .update({ invite_status: 'sent' })
-      .eq('id', guest.id)
-      .then(() => null)
+    if (cleaned.length === 9) {
+      cleaned = '233' + cleaned
+    }
+    window.open(`https://wa.me/${cleaned}?text=${encoded}`, '_blank')
+  } else {
+    window.open(`https://wa.me/?text=${encoded}`, '_blank')
   }
+
+  supabase
+    .from('guests')
+    .update({ invite_status: 'sent' })
+    .eq('id', guest.id)
+    .then(() => null)
+}
 
   const sendEmailInvites = async () => {
     if (!selected.length || !wedding) return

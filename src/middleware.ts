@@ -28,28 +28,13 @@ export async function middleware(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   const { pathname } = request.nextUrl
 
-  // These paths are ALWAYS public — never redirect
-  const publicPaths = [
-    '/login',
-    '/signup',
-    '/rsvp',
-    '/wedding',
-    '/auth',
-    '/api/rsvp',
-    '/api/log-activity',
-    '/_next',
-    '/favicon.ico',
-  ]
-
-  const isPublic = publicPaths.some(p => pathname.startsWith(p))
-
-  // Only protect dashboard routes
-  if (!isPublic && pathname.startsWith('/dashboard') && !user) {
+  // Only protect dashboard routes — everything else is public
+  if (pathname.startsWith('/dashboard') && !user) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  // Redirect logged in users away from login/signup
-  if (user && (pathname === '/login' || pathname === '/signup')) {
+  // Redirect logged in users away from login
+  if (user && pathname === '/login') {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
