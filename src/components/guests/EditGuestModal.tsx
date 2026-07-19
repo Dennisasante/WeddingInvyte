@@ -11,6 +11,11 @@ interface Guest {
   category: string
   allow_plus_one: boolean
   notes: string | null
+  rsvp_status: string
+  invite_status: string
+  dietary_restrictions: string | null
+  wedding_id: string
+  created_at: string
 }
 
 interface Props {
