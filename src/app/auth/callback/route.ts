@@ -10,37 +10,39 @@ export async function GET(request: Request) {
     const supabase = await createClient()
     const { data } = await supabase.auth.exchangeCodeForSession(code)
 
-    // Handle co-admin join via Google
-    if (joinToken && data.user) {
-      const { data: invite } = await supabase
-        .from('co_admin_invites')
-        .select('*')
-        .eq('token', joinToken)
-        .eq('status', 'pending')
-        .single()
-
-      if (invite) {
-        await supabase
-          .from('profiles')
-          .update({
-            wedding_id: invite.wedding_id,
-            is_primary_admin: false,
-          })
-          .eq('id', data.user.id)
-
-        await supabase
-          .from('co_admin_invites')
-          .update({ status: 'accepted' })
-          .eq('id', invite.id)
-
-        return NextResponse.redirect(`${origin}/dashboard`)
-      }
-    }
-
-    // Check if user needs onboarding
     if (data.user) {
-      const supabase2 = await createClient()
-      const { data: profile } = await supabase2
+      // Wait briefly for the profile trigger to fire
+      await new Promise(resolve => setTimeout(resolve, 500))
+
+      // Handle co-admin join via Google
+      if (joinToken) {
+        const { data: invite } = await supabase
+          .from('co_admin_invites')
+          .select('*')
+          .eq('token', joinToken)
+          .eq('status', 'pending')
+          .single()
+
+        if (invite) {
+          await supabase
+            .from('profiles')
+            .update({
+              wedding_id: invite.wedding_id,
+              is_primary_admin: false,
+            })
+            .eq('id', data.user.id)
+
+          await supabase
+            .from('co_admin_invites')
+            .update({ status: 'accepted' })
+            .eq('id', invite.id)
+
+          return NextResponse.redirect(`${origin}/dashboard`)
+        }
+      }
+
+      // Check if user needs onboarding
+      const { data: profile } = await supabase
         .from('profiles')
         .select('wedding_id, role')
         .eq('id', data.user.id)
@@ -53,6 +55,8 @@ export async function GET(request: Request) {
       if (!profile?.wedding_id) {
         return NextResponse.redirect(`${origin}/onboarding`)
       }
+
+      return NextResponse.redirect(`${origin}/dashboard`)
     }
   }
 

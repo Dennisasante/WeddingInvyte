@@ -3,6 +3,8 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { Heart, Calendar, MapPin, Palette, Check } from 'lucide-react'
+import { useEffect } from 'react'
+
 
 interface Props {
   userId: string
@@ -33,6 +35,19 @@ export default function OnboardingWizard({ userId, userEmail }: Props) {
     primary_color: '#D4A373',
     secondary_color: '#FEFAE0',
   })
+
+  // Add inside the component, after all useState declarations
+  useEffect(() => {
+    // Ensure we have a valid session
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        router.push('/signup')
+      }
+    }
+    checkSession()
+  }, [])
+
   const router = useRouter()
   const supabase = createClient()
 
@@ -156,8 +171,8 @@ export default function OnboardingWizard({ userId, userEmail }: Props) {
           {STEPS.slice(0, 3).map((s, i) => (
             <div key={s} className="flex items-center flex-1">
               <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition ${i < step ? 'bg-amber-500 text-white' :
-                  i === step ? 'bg-amber-500 text-white' :
-                    'bg-gray-100 text-gray-400'
+                i === step ? 'bg-amber-500 text-white' :
+                  'bg-gray-100 text-gray-400'
                 }`}>
                 {i < step ? <Check size={14} /> : i + 1}
               </div>
@@ -321,8 +336,8 @@ export default function OnboardingWizard({ userId, userEmail }: Props) {
                       secondary_color: preset.secondary,
                     })}
                     className={`w-full flex items-center gap-4 p-4 rounded-xl border-2 transition ${form.theme_preset === preset.key
-                        ? 'border-amber-400 bg-amber-50'
-                        : 'border-gray-100 hover:border-gray-200'
+                      ? 'border-amber-400 bg-amber-50'
+                      : 'border-gray-100 hover:border-gray-200'
                       }`}
                   >
                     <div className="flex gap-2">

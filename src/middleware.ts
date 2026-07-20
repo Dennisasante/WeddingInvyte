@@ -28,14 +28,13 @@ export async function middleware(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   const { pathname } = request.nextUrl
 
-  // Only protect dashboard routes — everything else is public
-  // Only protect dashboard routes — everything else is public
+  // Only protect dashboard routes
   if (pathname.startsWith('/dashboard') && !user) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
   // Redirect logged in users away from login/signup
-  // But NOT from onboarding — they need to complete it
+  // Do NOT redirect from /onboarding — they need to go there after signup
   if (user && (pathname === '/login' || pathname === '/signup')) {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
