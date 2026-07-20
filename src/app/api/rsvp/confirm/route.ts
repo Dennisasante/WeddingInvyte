@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { Resend } from 'resend'
+import { logActivityServer } from '@/lib/logActivityServer'
 
 const RSVP_LABELS: Record<string, string> = {
-  yes:        "Yes, I'll be attending.",
-  yes_joy:    "I'll be there with joy.",
-  no:         "Regretfully, I can't make it.",
-  from_afar:  "With love, I'll celebrate from afar.",
+  yes: "Yes, I'll be attending.",
+  yes_joy: "I'll be there with joy.",
+  no: "Regretfully, I can't make it.",
+  from_afar: "With love, I'll celebrate from afar.",
 }
 
 export async function POST(request: NextRequest) {
@@ -50,6 +51,7 @@ export async function POST(request: NextRequest) {
         ? `See you there! Your RSVP is confirmed 💌`
         : `RSVP received — ${wedding.couple_names}`,
       html: `
+      
 <!DOCTYPE html>
 <html>
 <body style="margin:0;padding:0;background:#f9f6f0;font-family:Georgia,serif;">
@@ -91,9 +93,9 @@ export async function POST(request: NextRequest) {
               <p style="color:#333;font-size:16px;margin:0;font-family:Arial,sans-serif;
                 font-weight:600;">
                 ${new Date(wedding.event_date).toLocaleDateString('en-US', {
-                  weekday: 'long', year: 'numeric',
-                  month: 'long', day: 'numeric'
-                })}
+        weekday: 'long', year: 'numeric',
+        month: 'long', day: 'numeric'
+      })}
               </p>
               ${wedding.venue_name ? `
               <p style="color:#999;font-size:12px;margin:16px 0 6px;
@@ -104,8 +106,8 @@ export async function POST(request: NextRequest) {
             </div>` : ''}
             <p style="color:#aaa;font-size:13px;margin:0;">
               ${isAttending
-                ? "We can't wait to celebrate with you!"
-                : "We appreciate you letting us know and wish you all the best."}
+          ? "We can't wait to celebrate with you!"
+          : "We appreciate you letting us know and wish you all the best."}
             </p>
           </td>
         </tr>
@@ -122,6 +124,17 @@ export async function POST(request: NextRequest) {
   </table>
 </body>
 </html>`,
+    })
+
+    // Log RSVP activity
+    await logActivityServer({
+      weddingId,
+      action: 'rsvp_received',
+      entityType: 'guest',
+      details: {
+        guestName,
+        response,
+      },
     })
 
     return NextResponse.json({ success: true })

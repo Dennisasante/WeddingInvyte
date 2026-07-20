@@ -29,12 +29,14 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // Only protect dashboard routes — everything else is public
+  // Only protect dashboard routes — everything else is public
   if (pathname.startsWith('/dashboard') && !user) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  // Redirect logged in users away from login
-  if (user && pathname === '/login') {
+  // Redirect logged in users away from login/signup
+  // But NOT from onboarding — they need to complete it
+  if (user && (pathname === '/login' || pathname === '/signup')) {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 

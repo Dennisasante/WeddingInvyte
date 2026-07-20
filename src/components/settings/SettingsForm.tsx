@@ -1,7 +1,8 @@
 'use client'
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { User, Lock, Save } from 'lucide-react'
+import { User, Lock, Save, Users } from 'lucide-react'
+import CoAdminInviteForm from './CoAdminInviteForm'
 
 interface Profile {
   id: string
@@ -10,7 +11,12 @@ interface Profile {
 }
 
 interface Props {
-  profile: Profile
+  profile: {
+    id: string
+    full_name: string | null
+    role: string
+    wedding_id: string | null
+  }
   userEmail: string
 }
 
@@ -206,6 +212,20 @@ export default function SettingsForm({ profile, userEmail }: Props) {
             {savingPassword ? 'Changing...' : 'Change Password'}
           </button>
         </div>
+
+        {/* Co-Admin Invite — only show for primary admin */}
+        {profile.wedding_id && (
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+            <div className="flex items-center gap-2 mb-5">
+              <Users size={18} className="text-amber-500" />
+              <h2 className="font-bold text-gray-800">Invite Partner</h2>
+            </div>
+            <p className="text-sm text-gray-500 mb-4">
+              Invite your partner to co-manage this wedding. They will have full access to the dashboard.
+            </p>
+            <CoAdminInviteForm weddingId={profile.wedding_id} />
+          </div>
+        )}
       </div>
     </div>
   )

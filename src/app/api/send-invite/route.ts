@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { Resend } from 'resend'
+import { logActivityServer } from '@/lib/logActivityServer'
+
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient()
@@ -123,6 +125,15 @@ export async function POST(request: NextRequest) {
         .from('guests')
         .update({ invite_status: 'sent' })
         .eq('id', guest.id)
+
+      await logActivityServer({
+        weddingId,
+        action: 'invite_sent',
+        entityType: 'guest',
+        entityId: guest.id,
+        details: { guestName: guest.name, email: guest.email },
+      })
+
       results.push({ guestId: guest.id, sent: true })
     } else {
       results.push({ guestId: guest.id, sent: false, error: error.message })

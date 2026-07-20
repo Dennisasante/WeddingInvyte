@@ -4,38 +4,56 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
-export default function LoginPage() {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
+export default function SignupPage() {
+  const [form, setForm] = useState({
+    fullName: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+  })
   const [loading, setLoading] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
   const [error, setError] = useState('')
   const router = useRouter()
   const supabase = createClient()
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (form.password !== form.confirmPassword) {
+      setError('Passwords do not match')
+      return
+    }
+    if (form.password.length < 8) {
+      setError('Password must be at least 8 characters')
+      return
+    }
+
     setLoading(true)
     setError('')
-    const { error } = await supabase.auth.signInWithPassword({
-      email: email.trim(),
-      password: password.trim(),
+
+    const { error } = await supabase.auth.signUp({
+      email: form.email.trim(),
+      password: form.password,
+      options: {
+        data: { full_name: form.fullName.trim() },
+        emailRedirectTo: `${window.location.origin}/onboarding`,
+      },
     })
+
     if (error) {
       setError(error.message)
       setLoading(false)
     } else {
-      router.push('/dashboard')
-      router.refresh()
+      router.push('/onboarding')
     }
   }
 
-  const handleGoogleLogin = async () => {
+  const handleGoogleSignup = async () => {
     setGoogleLoading(true)
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo: `${window.location.origin}/onboarding`,
       },
     })
     if (error) {
@@ -52,8 +70,10 @@ export default function LoginPage() {
             <span className="text-3xl">💍</span>
             <span className="font-bold text-gray-800 text-xl">WeddingInvite</span>
           </Link>
-          <h1 className="text-2xl font-bold text-gray-800">Welcome back</h1>
-          <p className="text-gray-500 mt-1 text-sm">Sign in to manage your wedding</p>
+          <h1 className="text-2xl font-bold text-gray-800">Create your account</h1>
+          <p className="text-gray-500 mt-1 text-sm">
+            Start planning your perfect wedding
+          </p>
         </div>
 
         <div className="bg-white rounded-2xl shadow-lg p-8 border border-amber-100">
@@ -63,9 +83,9 @@ export default function LoginPage() {
             </div>
           )}
 
-          {/* Google Login */}
+          {/* Google Sign Up */}
           <button
-            onClick={handleGoogleLogin}
+            onClick={handleGoogleSignup}
             disabled={googleLoading}
             className="w-full flex items-center justify-center gap-3 border border-gray-200 rounded-xl py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 transition mb-4 disabled:opacity-60"
           >
@@ -80,22 +100,34 @@ export default function LoginPage() {
 
           <div className="flex items-center gap-3 mb-4">
             <div className="flex-1 h-px bg-gray-100" />
-            <span className="text-xs text-gray-400">or sign in with email</span>
+            <span className="text-xs text-gray-400">or sign up with email</span>
             <div className="flex-1 h-px bg-gray-100" />
           </div>
 
-          <form onSubmit={handleLogin} className="space-y-4">
+          <form onSubmit={handleSignup} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Email address
+                Full Name
+              </label>
+              <input
+                required
+                value={form.fullName}
+                onChange={e => setForm({ ...form, fullName: e.target.value })}
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-300 text-sm"
+                placeholder="Emma Johnson"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Email Address
               </label>
               <input
                 type="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
                 required
+                value={form.email}
+                onChange={e => setForm({ ...form, email: e.target.value })}
                 className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-300 text-sm"
-                placeholder="you@example.com"
+                placeholder="emma@example.com"
               />
             </div>
             <div>
@@ -104,11 +136,24 @@ export default function LoginPage() {
               </label>
               <input
                 type="password"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
                 required
+                value={form.password}
+                onChange={e => setForm({ ...form, password: e.target.value })}
                 className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-300 text-sm"
-                placeholder="••••••••"
+                placeholder="Minimum 8 characters"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Confirm Password
+              </label>
+              <input
+                type="password"
+                required
+                value={form.confirmPassword}
+                onChange={e => setForm({ ...form, confirmPassword: e.target.value })}
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-300 text-sm"
+                placeholder="Repeat your password"
               />
             </div>
             <button
@@ -116,14 +161,14 @@ export default function LoginPage() {
               disabled={loading}
               className="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 rounded-xl transition disabled:opacity-60"
             >
-              {loading ? 'Signing in...' : 'Sign In'}
+              {loading ? 'Creating account...' : 'Create Account'}
             </button>
           </form>
 
           <p className="text-center text-sm text-gray-500 mt-4">
-            Don&apos;t have an account?{' '}
-            <Link href="/signup" className="text-amber-600 font-medium hover:underline">
-              Create one free
+            Already have an account?{' '}
+            <Link href="/login" className="text-amber-600 font-medium hover:underline">
+              Sign in
             </Link>
           </p>
         </div>
