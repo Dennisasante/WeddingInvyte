@@ -36,10 +36,5 @@ export default async function RSVPPage({
       .eq('id', guest.id)
   }
 
-  // Full wedding website mode coming soon
-  // if (wedding.website_enabled) {
-  //   return <FullWeddingWebsite wedding={wedding} guest={guest} />
-  // }
-
   return <RSVPForm guest={guest} wedding={wedding} />
 }

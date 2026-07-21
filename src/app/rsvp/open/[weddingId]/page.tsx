@@ -17,10 +17,5 @@ export default async function OpenRSVPPage({
 
   if (!wedding || !wedding.is_active) return notFound()
 
-  // Full wedding website mode coming soon
-  // if (wedding.website_enabled) {
-  //   return <FullWeddingWebsite wedding={wedding} guest={null} />
-  // }
-
   return <OpenRSVPForm wedding={wedding} />
 }
