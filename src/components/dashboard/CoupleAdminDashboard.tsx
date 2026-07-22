@@ -56,9 +56,9 @@ export default function CoupleAdminDashboard({ profile, wedding, guests }: Props
 
   const daysUntil = wedding.event_date
     ? Math.ceil(
-        (new Date(wedding.event_date).getTime() - new Date().getTime()) /
-          86400000
-      )
+      (new Date(wedding.event_date).getTime() - new Date().getTime()) /
+      86400000
+    )
     : null
 
   const primaryColor = wedding.primary_color || '#D4A373'
@@ -103,11 +103,11 @@ export default function CoupleAdminDashboard({ profile, wedding, guests }: Props
 
           {wedding.event_date
             ? new Date(wedding.event_date).toLocaleDateString('en-US', {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-              })
+              weekday: 'long',
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric'
+            })
             : 'Date not set'}
 
           {daysUntil !== null && daysUntil > 0 && (
@@ -199,19 +199,24 @@ export default function CoupleAdminDashboard({ profile, wedding, guests }: Props
       </div>
 
       {/* RSVP Link Banner */}
-<div className="bg-amber-50 border border-amber-100 rounded-2xl p-5 mb-4">
-  <div className="flex items-center justify-between flex-wrap gap-3">
-    <div>
-      <p className="text-sm font-bold text-amber-800 mb-0.5">
-        Your Public RSVP Page
-      </p>
-      <p className="text-xs text-amber-600">
-        Share this link with guests who don't have a personal invite
-      </p>
-    </div>
-    <CopyLinkButton weddingId={wedding.id} />
-  </div>
-</div>
+      <div className="bg-amber-50 border border-amber-100 rounded-2xl p-5 mb-4">
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <div>
+            <p className="text-sm font-bold text-amber-800 mb-0.5">
+              Your Public RSVP Page
+            </p>
+            <p className="text-xs text-amber-600">
+              Share this link with guests who don't have a personal invite
+            </p>
+          </div>
+          <CopyLinkButton
+            weddingId={wedding.id}
+            coupleNames={wedding.couple_names}
+            eventDate={wedding.event_date}
+            venueName={wedding.venue_name}
+          />
+        </div>
+      </div>
 
       {/* Quick Actions */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -273,7 +278,12 @@ export default function CoupleAdminDashboard({ profile, wedding, guests }: Props
   )
 }
 
-function CopyLinkButton({ weddingId }: { weddingId: string }) {
+function CopyLinkButton({ weddingId, coupleNames, eventDate, venueName }: {
+  weddingId: string
+  coupleNames: string
+  eventDate: string | null
+  venueName: string | null
+}) {
   const [copied, setCopied] = useState(false)
   const [url, setUrl] = useState('')
 
@@ -283,7 +293,26 @@ function CopyLinkButton({ weddingId }: { weddingId: string }) {
 
   const copy = () => {
     if (!url) return
-    navigator.clipboard.writeText(url)
+
+    const dateStr = eventDate
+      ? new Date(eventDate).toLocaleDateString('en-US', {
+        weekday: 'long', month: 'long', day: 'numeric', year: 'numeric'
+      })
+      : ''
+
+    const message = [
+      `You are cordially invited to the wedding of`,
+      `${coupleNames}`,
+      dateStr ? `Date: ${dateStr}` : '',
+      venueName ? `Venue: ${venueName}` : '',
+      ``,
+      `Kindly RSVP by tapping the link below:`,
+      url,
+      ``,
+      `We look forward to celebrating with you!`,
+    ].filter(Boolean).join('\n')
+
+    navigator.clipboard.writeText(message)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
@@ -299,7 +328,7 @@ function CopyLinkButton({ weddingId }: { weddingId: string }) {
         onClick={copy}
         className="text-xs bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded-lg transition font-medium flex-shrink-0"
       >
-        {copied ? '✓ Copied!' : 'Copy Link'}
+        {copied ? '✓ Copied!' : 'Copy Message'}
       </button>
     </div>
   )

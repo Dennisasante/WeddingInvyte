@@ -4,32 +4,19 @@ import type { Metadata } from 'next'
 export async function generateMetadata({
   params,
 }: {
-  params: { token: string }
+  params: { weddingId: string }
 }): Promise<Metadata> {
   const supabase = await createClient()
 
-  const { data: guest } = await supabase
-    .from('guests')
-    .select('wedding_id, name')
-    .eq('invite_token', params.token)
-    .single()
-
-  if (!guest) {
-    return {
-      title: 'Wedding Invitation — Wedding Invite',
-      description: 'You have been invited to a wedding.',
-    }
-  }
-
   const { data: wedding } = await supabase
     .from('weddings')
-    .select('couple_names, event_date, venue_name, couple_photo_url, cover_photo_url, primary_color')
-    .eq('id', guest.wedding_id)
+    .select('couple_names, event_date, venue_name, couple_photo_url, cover_photo_url')
+    .eq('id', params.weddingId)
     .single()
 
   if (!wedding) {
     return {
-      title: 'Wedding Invitation — Wedding Invite',
+      title: 'Wedding Invitation - Wedding Invite',
       description: 'You have been invited to a wedding.',
     }
   }
@@ -43,10 +30,10 @@ export async function generateMetadata({
       })
     : null
 
-  const title = `${guest.name}, you are invited! — ${wedding.couple_names}`
+  const title = `You are invited! - ${wedding.couple_names}'s Wedding`
 
   const descriptionParts = [
-    `You are cordially invited to the wedding of ${wedding.couple_names}.`,
+    `You are cordially invited to celebrate the wedding of ${wedding.couple_names}.`,
     date ? `Join us on ${date}.` : null,
     wedding.venue_name ? `Venue: ${wedding.venue_name}.` : null,
     'Tap to RSVP.',
@@ -54,7 +41,6 @@ export async function generateMetadata({
 
   const description = descriptionParts.join(' ')
 
-  // Prefer couple photo, then cover photo
   const image = wedding.couple_photo_url || wedding.cover_photo_url || null
 
   const ogImages = image
@@ -65,7 +51,7 @@ export async function generateMetadata({
     title,
     description,
     openGraph: {
-      title: `💍 ${wedding.couple_names} — Wedding Invitation`,
+      title: `${wedding.couple_names} - Wedding Invitation`,
       description,
       images: ogImages,
       type: 'website',
@@ -73,14 +59,14 @@ export async function generateMetadata({
     },
     twitter: {
       card: image ? 'summary_large_image' : 'summary',
-      title: `💍 ${wedding.couple_names} — Wedding Invitation`,
+      title: `${wedding.couple_names} - Wedding Invitation`,
       description,
       images: image ? [image] : [],
     },
   }
 }
 
-export default function RSVPTokenLayout({
+export default function OpenRSVPLayout({
   children,
 }: {
   children: React.ReactNode
