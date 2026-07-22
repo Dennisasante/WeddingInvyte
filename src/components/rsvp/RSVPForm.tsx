@@ -37,9 +37,7 @@ interface Props {
 
 const RSVP_OPTIONS = [
   { key: 'yes', label: "Yes, I'll be attending.", emoji: '✨' },
-  { key: 'yes_joy', label: "I'll be there with joy.", emoji: '💕' },
   { key: 'no', label: "Regretfully, I can't make it.", emoji: '😔' },
-  { key: 'from_afar', label: "With love, I'll celebrate from afar.", emoji: '🌟' },
 ]
 
 type Step = 'welcome' | 'form' | 'confirmed'

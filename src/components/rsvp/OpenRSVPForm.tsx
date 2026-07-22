@@ -13,18 +13,18 @@ interface Wedding {
   rsvp_deadline: string | null
   primary_color: string
   secondary_color: string
+  couple_photo_url: string | null
   cover_photo_url: string | null
 }
 
 const RSVP_OPTIONS = [
   { key: 'yes', label: "Yes, I'll be attending.", emoji: '✨' },
-  { key: 'yes_joy', label: "I'll be there with joy.", emoji: '💕' },
   { key: 'no', label: "Regretfully, I can't make it.", emoji: '😔' },
-  { key: 'from_afar', label: "With love, I'll celebrate from afar.", emoji: '🌟' },
 ]
 
 export default function OpenRSVPForm({ wedding }: { wedding: Wedding }) {
   const [name, setName] = useState('')
+  const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
   const [response, setResponse] = useState('')
   const [dietary, setDietary] = useState('')
@@ -53,6 +53,10 @@ export default function OpenRSVPForm({ wedding }: { wedding: Wedding }) {
       setError('Please enter your name')
       return
     }
+    if (!phone.trim()) {
+      setError('Please enter your phone number')
+      return
+    }
     if (!response) {
       setError('Please select a response')
       return
@@ -67,6 +71,7 @@ export default function OpenRSVPForm({ wedding }: { wedding: Wedding }) {
       .insert({
         wedding_id: wedding.id,
         name: name.trim(),
+        phone: phone.trim(),
         email: email.trim() || null,
         category: 'individual',
         rsvp_status: response,
@@ -140,7 +145,7 @@ export default function OpenRSVPForm({ wedding }: { wedding: Wedding }) {
           style={{ border: `2px solid ${primary}40` }}
         >
           {wedding.cover_photo_url ? (
-            <div className="relative h-56">
+            <div className="relative h-72">
               <img
                 src={wedding.cover_photo_url}
                 alt="Wedding"
@@ -160,7 +165,7 @@ export default function OpenRSVPForm({ wedding }: { wedding: Wedding }) {
             </div>
           ) : (
             <div
-              className="h-40 flex items-center justify-center"
+              className="h-48 flex items-center justify-center"
               style={{ backgroundColor: primary }}
             >
               <div className="text-center">
@@ -171,7 +176,21 @@ export default function OpenRSVPForm({ wedding }: { wedding: Wedding }) {
               </div>
             </div>
           )}
-          <div className="p-5 text-center" style={{ backgroundColor: secondary }}>
+
+          <div className="p-6 text-center" style={{ backgroundColor: secondary }}>
+            {/* Couple Photo Circle Overlay */}
+            {wedding.couple_photo_url && (
+              <div className="flex justify-center -mt-16 mb-4">
+                <div className="w-28 h-28 rounded-full border-4 border-white shadow-lg overflow-hidden">
+                  <img
+                    src={wedding.couple_photo_url}
+                    alt="The couple"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              </div>
+            )}
+
             <div className="flex items-center gap-3 mb-3">
               <div className="flex-1 h-px" style={{ backgroundColor: `${primary}40` }} />
               <span style={{ color: primary }}>✦</span>
@@ -195,18 +214,6 @@ export default function OpenRSVPForm({ wedding }: { wedding: Wedding }) {
             )}
           </div>
         </div>
-
-        {wedding.welcome_message && (
-          <div
-            className="rounded-2xl p-5 mb-6 text-gray-600 italic text-sm text-center border"
-            style={{
-              backgroundColor: `${primary}10`,
-              borderColor: `${primary}30`
-            }}
-          >
-            "{wedding.welcome_message}"
-          </div>
-        )}
 
         {/* Form */}
         <div
@@ -240,6 +247,19 @@ export default function OpenRSVPForm({ wedding }: { wedding: Wedding }) {
                 onChange={e => setName(e.target.value)}
                 className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-200"
                 placeholder="Jane Doe"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Phone Number <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="tel"
+                required
+                value={phone}
+                onChange={e => setPhone(e.target.value)}
+                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-200"
+                placeholder="+233 24 000 0000"
               />
             </div>
             <div>
@@ -308,7 +328,7 @@ export default function OpenRSVPForm({ wedding }: { wedding: Wedding }) {
 
           <button
             onClick={handleSubmit}
-            disabled={!response || !name.trim() || loading || isDeadlinePassed}
+            disabled={!response || !name.trim() || !phone.trim() || loading || isDeadlinePassed}
             className="w-full py-4 rounded-xl text-white font-bold transition disabled:opacity-50"
             style={{ backgroundColor: primary }}
           >
