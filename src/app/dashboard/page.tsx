@@ -36,12 +36,22 @@ export default async function DashboardPage() {
     )
   }
 
-  // Couple Admin
+  // Couple Admin — if they have no wedding yet, send them to onboarding
+  // instead of showing a dead-end "no wedding" screen.
+  if (!profile.wedding_id) {
+    redirect('/onboarding')
+  }
+
   const { data: wedding } = await supabase
     .from('weddings')
     .select('*')
     .eq('id', profile.wedding_id)
     .single()
+
+  // Edge case: wedding_id points to a wedding that no longer exists
+  if (!wedding) {
+    redirect('/onboarding')
+  }
 
   const { data: guests } = await supabase
     .from('guests')
@@ -52,7 +62,7 @@ export default async function DashboardPage() {
   return (
     <CoupleAdminDashboard
       profile={profile}
-      wedding={wedding || null}
+      wedding={wedding}
       guests={guests || []}
     />
   )
