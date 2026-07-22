@@ -133,23 +133,23 @@ export default function WeddingEditor({ wedding }: { wedding: Wedding }) {
   }
 
   const [couplePhotoUrl, setCouplePhotoUrl] = useState(wedding.couple_photo_url || '')
-const [uploadingCouple, setUploadingCouple] = useState(false)
+  const [uploadingCouple, setUploadingCouple] = useState(false)
 
-const handleCouplePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-  const file = e.target.files?.[0]
-  if (!file) return
-  if (file.size > 5 * 1024 * 1024) { setError('Image must be under 5MB'); return }
-  setUploadingCouple(true)
-  const fileExt = file.name.split('.').pop()
-  const fileName = `${wedding.id}/couple.${fileExt}`
-  const { error: uploadError } = await supabase.storage
-    .from('wedding-covers')
-    .upload(fileName, file, { upsert: true })
-  if (uploadError) { setError('Upload failed: ' + uploadError.message); setUploadingCouple(false); return }
-  const { data: { publicUrl } } = supabase.storage.from('wedding-covers').getPublicUrl(fileName)
-  setCouplePhotoUrl(publicUrl)
-  setUploadingCouple(false)
-}
+  const handleCouplePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > 5 * 1024 * 1024) { setError('Image must be under 5MB'); return }
+    setUploadingCouple(true)
+    const fileExt = file.name.split('.').pop()
+    const fileName = `${wedding.id}/couple-${Date.now()}.${fileExt}`
+    const { error: uploadError } = await supabase.storage
+      .from('wedding-covers')
+      .upload(fileName, file, { upsert: true })
+    if (uploadError) { setError('Upload failed: ' + uploadError.message); setUploadingCouple(false); return }
+    const { data: { publicUrl } } = supabase.storage.from('wedding-covers').getPublicUrl(fileName)
+    setCouplePhotoUrl(publicUrl)
+    setUploadingCouple(false)
+  }
 
   const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -164,7 +164,8 @@ const handleCouplePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) =
     setError('')
 
     const fileExt = file.name.split('.').pop()
-    const fileName = `${wedding.id}/cover.${fileExt}`
+    // Use a timestamp to force a unique filename every upload
+    const fileName = `${wedding.id}/cover-${Date.now()}.${fileExt}`
 
     const { error: uploadError } = await supabase.storage
       .from('wedding-covers')
@@ -311,45 +312,45 @@ const handleCouplePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) =
             <h2 className="font-bold text-gray-800">Cover Photo</h2>
           </div>
 
-        {/* Couple Photo */}
-<div className="mt-6 pt-6 border-t border-gray-100">
-  <h3 className="text-sm font-semibold text-gray-700 mb-1">
-    Couple Photo
-  </h3>
-  <p className="text-xs text-gray-400 mb-3">
-    This photo appears on your RSVP invitation card when guests open their link
-  </p>
-  {couplePhotoUrl ? (
-    <div className="relative">
-      <img
-        src={couplePhotoUrl}
-        alt="Couple"
-        className="w-full h-48 object-cover rounded-xl mb-3"
-      />
-      <button
-        onClick={() => setCouplePhotoUrl('')}
-        className="text-sm text-red-500 hover:underline"
-      >
-        Remove photo
-      </button>
-    </div>
-  ) : (
-    <label className="flex flex-col items-center justify-center w-full h-36 border-2 border-dashed border-gray-200 rounded-xl cursor-pointer hover:border-amber-300 hover:bg-amber-50 transition">
-      <span className="text-gray-300 text-3xl mb-2">👫</span>
-      <span className="text-sm font-medium text-gray-500">
-        {uploadingCouple ? 'Uploading...' : 'Upload couple photo'}
-      </span>
-      <span className="text-xs text-gray-400 mt-1">JPG, PNG or WebP — max 5MB</span>
-      <input
-        type="file"
-        accept="image/jpeg,image/png,image/webp"
-        className="hidden"
-        onChange={handleCouplePhotoUpload}
-        disabled={uploadingCouple}
-      />
-    </label>
-  )}
-</div>
+          {/* Couple Photo */}
+          <div className="mt-6 pt-6 border-t border-gray-100">
+            <h3 className="text-sm font-semibold text-gray-700 mb-1">
+              Couple Photo
+            </h3>
+            <p className="text-xs text-gray-400 mb-3">
+              This photo appears on your RSVP invitation card when guests open their link
+            </p>
+            {couplePhotoUrl ? (
+              <div className="relative">
+                <img
+                  src={couplePhotoUrl}
+                  alt="Couple"
+                  className="w-full h-48 object-cover rounded-xl mb-3"
+                />
+                <button
+                  onClick={() => setCouplePhotoUrl('')}
+                  className="text-sm text-red-500 hover:underline"
+                >
+                  Remove photo
+                </button>
+              </div>
+            ) : (
+              <label className="flex flex-col items-center justify-center w-full h-36 border-2 border-dashed border-gray-200 rounded-xl cursor-pointer hover:border-amber-300 hover:bg-amber-50 transition">
+                <span className="text-gray-300 text-3xl mb-2">👫</span>
+                <span className="text-sm font-medium text-gray-500">
+                  {uploadingCouple ? 'Uploading...' : 'Upload couple photo'}
+                </span>
+                <span className="text-xs text-gray-400 mt-1">JPG, PNG or WebP — max 5MB</span>
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="hidden"
+                  onChange={handleCouplePhotoUpload}
+                  disabled={uploadingCouple}
+                />
+              </label>
+            )}
+          </div>
 
           {coverUrl ? (
             <div className="relative">
