@@ -15,6 +15,9 @@ interface Wedding {
   secondary_color: string
   couple_photo_url: string | null
   cover_photo_url: string | null
+  show_cover_overlay: boolean
+  cover_overlay_text: string | null
+  flyer_image_url: string | null
 }
 
 const RSVP_OPTIONS = [
@@ -105,6 +108,19 @@ export default function OpenRSVPForm({ wedding }: { wedding: Wedding }) {
 
     setConfirmed(true)
     setLoading(false)
+
+    // Notify the couple
+    fetch('/api/notify-couple', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        weddingId: wedding.id,
+        guestName: name,
+        response,
+        dietary: dietary || null,
+        message: message || null,
+      }),
+    }).catch(() => null)
   }
 
   if (confirmed) {
@@ -127,6 +143,29 @@ export default function OpenRSVPForm({ wedding }: { wedding: Wedding }) {
           <p className="text-gray-400 text-sm">
             {wedding.couple_names} can't wait to celebrate!
           </p>
+          {wedding.flyer_image_url && (
+            <div className="mt-6">
+              <img
+                src={wedding.flyer_image_url}
+                alt="Wedding attachment"
+                className="w-full rounded-xl shadow-md"
+              />
+
+              <a
+                href={wedding.flyer_image_url}
+                download
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-block mt-3 px-6 py-2.5 rounded-xl border text-sm font-medium"
+                style={{
+                  borderColor: `${primary}40`,
+                  color: primary,
+                }}
+              >
+                Download Image
+              </a>
+            </div>
+          )}
         </div>
       </div>
     )
@@ -158,9 +197,16 @@ export default function OpenRSVPForm({ wedding }: { wedding: Wedding }) {
                 }}
               />
               <div className="absolute bottom-0 left-0 right-0 p-5 text-center">
-                <h1 className="text-white font-bold text-2xl">
-                  {wedding.couple_names}
-                </h1>
+                {wedding.show_cover_overlay !== false && (
+                  <>
+                    <p className="text-white/70 text-xs uppercase tracking-widest mb-1">
+                      {wedding.cover_overlay_text || 'Together with their families'}
+                    </p>
+                    <h1 className="text-white font-bold text-2xl">
+                      {wedding.couple_names}
+                    </h1>
+                  </>
+                )}
               </div>
             </div>
           ) : (
@@ -236,6 +282,30 @@ export default function OpenRSVPForm({ wedding }: { wedding: Wedding }) {
               {error}
             </div>
           )}
+
+          {error && (
+            <div className="mb-4 p-3 bg-red-50 text-red-600 rounded-xl text-sm border border-red-100">
+              {error}
+            </div>
+          )}
+
+          {wedding.rsvp_deadline && !isDeadlinePassed && (
+            <div
+              className="mb-5 p-4 rounded-2xl text-center border-2"
+              style={{ borderColor: primary, backgroundColor: `${primary}15` }}
+            >
+              <p className="text-xs uppercase tracking-widest font-bold mb-1" style={{ color: primary }}>
+                ⏰ RSVP Deadline
+              </p>
+              <p className="text-lg font-extrabold text-gray-800">
+                {new Date(wedding.rsvp_deadline).toLocaleDateString('en-US', {
+                  weekday: 'long', month: 'long', day: 'numeric', year: 'numeric'
+                })}
+              </p>
+            </div>
+          )}
+
+          <div className="space-y-4 mb-6"></div>
 
           <div className="space-y-4 mb-6">
             <div>

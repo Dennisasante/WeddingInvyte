@@ -23,6 +23,10 @@ interface Wedding {
   existing_website_url: string | null
   directions: string | null
   maps_url: string | null
+  notify_on_rsvp: boolean
+  show_cover_overlay: boolean
+  cover_overlay_text: string | null
+  flyer_image_url: string | null
 }
 
 const THEME_PRESETS = [
@@ -80,6 +84,11 @@ export default function WeddingEditor({ wedding }: { wedding: Wedding }) {
   const [error, setError] = useState('')
   const [uploadingCover, setUploadingCover] = useState(false)
   const [coverUrl, setCoverUrl] = useState(wedding.cover_photo_url || '')
+  const [showCoverOverlay, setShowCoverOverlay] = useState(wedding.show_cover_overlay ?? true)
+  const [overlayText, setOverlayText] = useState(wedding.cover_overlay_text || '')
+  const [flyerUrl, setFlyerUrl] = useState(wedding.flyer_image_url || '')
+  const [notifyOnRsvp, setNotifyOnRsvp] = useState(wedding.notify_on_rsvp ?? true)
+  const [uploadingFlyer, setUploadingFlyer] = useState(false)
   const supabase = createClient()
 
   const handleThemeSelect = (preset: typeof THEME_PRESETS[0]) => {
@@ -120,6 +129,10 @@ export default function WeddingEditor({ wedding }: { wedding: Wedding }) {
         existing_website_url: form.existing_website_url.trim() || null,
         directions: form.directions.trim() || null,
         maps_url: form.maps_url.trim() || null,
+        show_cover_overlay: showCoverOverlay,
+        cover_overlay_text: overlayText.trim() || null,
+        flyer_image_url: flyerUrl || null,
+        notify_on_rsvp: notifyOnRsvp,
       })
       .eq('id', wedding.id)
 
@@ -149,6 +162,27 @@ export default function WeddingEditor({ wedding }: { wedding: Wedding }) {
     const { data: { publicUrl } } = supabase.storage.from('wedding-covers').getPublicUrl(fileName)
     setCouplePhotoUrl(publicUrl)
     setUploadingCouple(false)
+  }
+
+  const handleFlyerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > 8 * 1024 * 1024) { setError('Image must be under 8MB'); return }
+    setUploadingFlyer(true)
+    setError('')
+    const fileExt = file.name.split('.').pop()
+    const fileName = `${wedding.id}/flyer-${Date.now()}.${fileExt}`
+    const { error: uploadError } = await supabase.storage
+      .from('wedding-covers')
+      .upload(fileName, file, { upsert: true })
+    if (uploadError) {
+      setError('Failed to upload flyer: ' + uploadError.message)
+      setUploadingFlyer(false)
+      return
+    }
+    const { data: { publicUrl } } = supabase.storage.from('wedding-covers').getPublicUrl(fileName)
+    setFlyerUrl(publicUrl)
+    setUploadingFlyer(false)
   }
 
   const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -286,6 +320,18 @@ export default function WeddingEditor({ wedding }: { wedding: Wedding }) {
               placeholder: 'https://maps.google.com/...',
             })}
           </div>
+          <label className="flex items-center gap-3 cursor-pointer p-3 bg-blue-50 rounded-xl border border-blue-100">
+            <input
+              type="checkbox"
+              checked={notifyOnRsvp}
+              onChange={e => setNotifyOnRsvp(e.target.checked)}
+              className="w-4 h-4 rounded accent-blue-500"
+            />
+            <div>
+              <p className="text-sm font-medium text-blue-800">Email me when guests RSVP</p>
+              <p className="text-xs text-blue-600">Get notified instantly when someone responds</p>
+            </div>
+          </label>
         </div>
 
         {/* Venue */}
@@ -310,6 +356,83 @@ export default function WeddingEditor({ wedding }: { wedding: Wedding }) {
           <div className="flex items-center gap-2 mb-5">
             <Image size={18} className="text-amber-500" />
             <h2 className="font-bold text-gray-800">Cover Photo</h2>
+          </div>
+
+          {/* Cover Text Overlay Control */}
+          <div className="mt-6 pt-6 border-t border-gray-100">
+            <label className="flex items-center gap-3 cursor-pointer mb-4">
+              <input
+                type="checkbox"
+                checked={showCoverOverlay}
+                onChange={e => setShowCoverOverlay(e.target.checked)}
+                className="w-4 h-4 rounded accent-amber-500"
+              />
+              <div>
+                <p className="text-sm font-medium text-gray-700">Show text over cover photo</p>
+                <p className="text-xs text-gray-400">
+                  Turn off if you want the photo to stand alone with no text on it
+                </p>
+              </div>
+            </label>
+
+            {showCoverOverlay && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Custom overlay text
+                  <span className="text-gray-400 font-normal ml-1">(optional)</span>
+                </label>
+                <input
+                  value={overlayText}
+                  onChange={e => setOverlayText(e.target.value)}
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-200"
+                  placeholder="Together with their families (default if left blank)"
+                />
+                <p className="text-xs text-gray-400 mt-1">
+                  Leave blank to use the default "Together with their families" text
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Flyer / Attachment Image */}
+          <div className="mt-6 pt-6 border-t border-gray-100">
+            <h3 className="text-sm font-semibold text-gray-700 mb-1">
+              Attachment Image
+            </h3>
+            <p className="text-xs text-gray-400 mb-3">
+              Shown full-size to guests right after they RSVP — great for a flyer,
+              program, or a special photo
+            </p>
+            {flyerUrl ? (
+              <div className="relative">
+                <img
+                  src={flyerUrl}
+                  alt="Flyer"
+                  className="w-full max-h-64 object-contain rounded-xl mb-3 bg-gray-50"
+                />
+                <button
+                  onClick={() => setFlyerUrl('')}
+                  className="text-sm text-red-500 hover:underline"
+                >
+                  Remove attachment
+                </button>
+              </div>
+            ) : (
+              <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-200 rounded-xl cursor-pointer hover:border-amber-300 hover:bg-amber-50 transition">
+                <span className="text-gray-300 text-2xl mb-1">📎</span>
+                <span className="text-sm font-medium text-gray-500">
+                  {uploadingFlyer ? 'Uploading...' : 'Upload an attachment image'}
+                </span>
+                <span className="text-xs text-gray-400 mt-1">JPG, PNG or WebP — max 8MB</span>
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="hidden"
+                  onChange={handleFlyerUpload}
+                  disabled={uploadingFlyer}
+                />
+              </label>
+            )}
           </div>
 
           {/* Couple Photo */}

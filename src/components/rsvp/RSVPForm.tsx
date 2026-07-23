@@ -28,6 +28,9 @@ interface Wedding {
   existing_website_url: string | null
   directions: string | null
   maps_url: string | null
+  show_cover_overlay: boolean
+  cover_overlay_text: string | null
+  flyer_image_url: string | null
 }
 
 interface Props {
@@ -109,6 +112,19 @@ export default function RSVPForm({ guest, wedding }: Props) {
 
     setStep('confirmed')
     setLoading(false)
+
+    // Notify the couple
+    fetch('/api/notify-couple', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        weddingId: wedding.id,
+        guestName: guest.name,
+        response,
+        dietary: dietary || null,
+        message: message || null,
+      }),
+    }).catch(() => null)
   }
 
   if (step === 'confirmed') {
@@ -157,6 +173,29 @@ export default function RSVPForm({ guest, wedding }: Props) {
               📍 Get Directions
             </a>
           )}
+          {wedding.flyer_image_url && (
+            <div className="mt-6">
+              <img
+                src={wedding.flyer_image_url}
+                alt="Wedding attachment"
+                className="w-full rounded-xl shadow-md"
+              />
+
+              <a
+                href={wedding.flyer_image_url}
+                download
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-block mt-3 px-6 py-2.5 rounded-xl border text-sm font-medium"
+                style={{
+                  borderColor: `${primary}40`,
+                  color: primary,
+                }}
+              >
+                Download Image
+              </a>
+            </div>
+          )}
         </div>
       </div>
     )
@@ -186,18 +225,20 @@ export default function RSVPForm({ guest, wedding }: Props) {
                     background: `linear-gradient(to bottom, transparent 30%, ${primary}ee 100%)`
                   }}
                 />
-                <div className="absolute bottom-0 left-0 right-0 p-6 text-center">
-                  <p className="text-white/80 text-xs uppercase tracking-widest mb-2 font-light">
-                    Together with their families
-                  </p>
-                  <h1 className="text-white font-bold text-3xl">
-                    {wedding.couple_names.split('&')[0]?.trim()}
-                  </h1>
-                  <p className="text-white/70 text-xl my-1">and</p>
-                  <h1 className="text-white font-bold text-3xl">
-                    {wedding.couple_names.split('&')[1]?.trim()}
-                  </h1>
-                </div>
+                {wedding.show_cover_overlay !== false && (
+                  <div className="absolute bottom-0 left-0 right-0 p-6 text-center">
+                    <p className="text-white/80 text-xs uppercase tracking-widest mb-2 font-light">
+                      {wedding.cover_overlay_text || 'Together with their families'}
+                    </p>
+                    <h1 className="text-white font-bold text-3xl leading-tight">
+                      {wedding.couple_names.split('&')[0]?.trim()}
+                    </h1>
+                    <p className="text-white/70 text-xl my-1">and</p>
+                    <h1 className="text-white font-bold text-3xl leading-tight">
+                      {wedding.couple_names.split('&')[1]?.trim()}
+                    </h1>
+                  </div>
+                )}
               </div>
             ) : (
               <div
@@ -230,6 +271,22 @@ export default function RSVPForm({ guest, wedding }: Props) {
                       className="w-full h-full object-cover"
                     />
                   </div>
+                </div>
+              )}
+
+              {wedding.rsvp_deadline && (
+                <div
+                  className="mb-5 p-4 rounded-2xl text-center border-2"
+                  style={{ borderColor: primary, backgroundColor: `${primary}15` }}
+                >
+                  <p className="text-xs uppercase tracking-widest font-bold mb-1" style={{ color: primary }}>
+                    ⏰ RSVP Deadline
+                  </p>
+                  <p className="text-lg font-extrabold text-gray-800">
+                    {new Date(wedding.rsvp_deadline).toLocaleDateString('en-US', {
+                      weekday: 'long', month: 'long', day: 'numeric', year: 'numeric'
+                    })}
+                  </p>
                 </div>
               )}
 
@@ -358,15 +415,6 @@ export default function RSVPForm({ guest, wedding }: Props) {
                 >
                   RSVP Now 💌
                 </button>
-              )}
-
-              {wedding.rsvp_deadline && (
-                <p className="text-xs text-gray-400 mt-3">
-                  Please respond by{' '}
-                  {new Date(wedding.rsvp_deadline).toLocaleDateString('en-US', {
-                    month: 'long', day: 'numeric', year: 'numeric'
-                  })}
-                </p>
               )}
             </div>
           </div>

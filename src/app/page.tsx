@@ -46,11 +46,12 @@ function Reveal({
     <div
       ref={ref}
       className={className}
-      style={{
-        opacity: visible ? 1 : 0,
-        transform: visible ? 'translateY(0px)' : 'translateY(28px)',
-        transition: `opacity 0.8s cubic-bezier(0.16,1,0.3,1) ${delay}ms, transform 0.8s cubic-bezier(0.16,1,0.3,1) ${delay}ms`,
-      }}
+      style={
+        visible
+          ? { opacity: 1, transform: 'translateY(0px)', transition: `opacity 0.8s cubic-bezier(0.16,1,0.3,1) ${delay}ms, transform 0.8s cubic-bezier(0.16,1,0.3,1) ${delay}ms` }
+          : { opacity: 0, transform: 'translateY(28px)' }
+      }
+      suppressHydrationWarning
     >
       {children}
     </div>
@@ -94,79 +95,15 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-[#FFFBF5] font-sans overflow-x-hidden">
-      <style>{`
-        @keyframes floaty {
-          0%, 100% { transform: translateY(0px) rotate(0deg); }
-          50% { transform: translateY(-18px) rotate(6deg); }
-        }
-        @keyframes floaty-slow {
-          0%, 100% { transform: translateY(0px) rotate(0deg); }
-          50% { transform: translateY(-10px) rotate(-4deg); }
-        }
-        @keyframes shimmer {
-          0% { background-position: -200% 0; }
-          100% { background-position: 200% 0; }
-        }
-        @keyframes gradientMove {
-          0% { background-position: 0% 50%; }
-          50% { background-position: 100% 50%; }
-          100% { background-position: 0% 50%; }
-        }
-        @keyframes marquee {
-          0% { transform: translateX(0); }
-          100% { transform: translateX(-50%); }
-        }
-        @keyframes pulseGlow {
-          0%, 100% { box-shadow: 0 0 0 0 rgba(212,163,115,0.35); }
-          50% { box-shadow: 0 0 0 16px rgba(212,163,115,0); }
-        }
-        @keyframes drawLine {
-          from { width: 0%; }
-          to { width: 100%; }
-        }
-        .font-display {
-          font-family: Georgia, 'Times New Roman', serif;
-        }
-        .btn-shine {
-          position: relative;
-          overflow: hidden;
-        }
-        .btn-shine::after {
-          content: '';
-          position: absolute;
-          top: 0; left: -75%;
-          width: 50%; height: 100%;
-          background: linear-gradient(120deg, transparent, rgba(255,255,255,0.5), transparent);
-          transform: skewX(-20deg);
-          transition: left 0.7s ease;
-        }
-        .btn-shine:hover::after { left: 125%; }
-        .gradient-text {
-          background: linear-gradient(90deg, #D4A373, #B8845A, #D4A373);
-          background-size: 200% auto;
-          -webkit-background-clip: text;
-          background-clip: text;
-          color: transparent;
-          animation: shimmer 4s linear infinite;
-        }
-        .card-lift {
-          transition: transform 0.35s cubic-bezier(0.16,1,0.3,1), box-shadow 0.35s ease;
-        }
-        .card-lift:hover {
-          transform: translateY(-6px);
-          box-shadow: 0 20px 40px -12px rgba(212,163,115,0.25);
-        }
-      `}</style>
-
+      
       {/* ============================================================ */}
       {/*  NAV                                                          */}
       {/* ============================================================ */}
       <nav
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-          scrolled
-            ? 'bg-white/85 backdrop-blur-xl shadow-sm border-b border-amber-100'
-            : 'bg-transparent'
-        }`}
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled
+          ? 'bg-white/85 backdrop-blur-xl shadow-sm border-b border-amber-100'
+          : 'bg-transparent'
+          }`}
       >
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
