@@ -289,22 +289,6 @@ export default function OpenRSVPForm({ wedding }: { wedding: Wedding }) {
             </div>
           )}
 
-          {wedding.rsvp_deadline && !isDeadlinePassed && (
-            <div
-              className="mb-5 p-4 rounded-2xl text-center border-2"
-              style={{ borderColor: primary, backgroundColor: `${primary}15` }}
-            >
-              <p className="text-xs uppercase tracking-widest font-bold mb-1" style={{ color: primary }}>
-                ⏰ RSVP Deadline
-              </p>
-              <p className="text-lg font-extrabold text-gray-800">
-                {new Date(wedding.rsvp_deadline).toLocaleDateString('en-US', {
-                  weekday: 'long', month: 'long', day: 'numeric', year: 'numeric'
-                })}
-              </p>
-            </div>
-          )}
-
           <div className="space-y-4 mb-6"></div>
 
           <div className="space-y-4 mb-6">
@@ -346,6 +330,22 @@ export default function OpenRSVPForm({ wedding }: { wedding: Wedding }) {
               />
             </div>
           </div>
+
+          {wedding.rsvp_deadline && !isDeadlinePassed && (
+            <div
+              className="mb-5 p-4 rounded-2xl text-center border-2"
+              style={{ borderColor: primary, backgroundColor: `${primary}15` }}
+            >
+              <p className="text-xs uppercase tracking-widest font-bold mb-1" style={{ color: primary }}>
+                ⏰ RSVP Deadline
+              </p>
+              <p className="text-lg font-extrabold text-gray-800">
+                {new Date(wedding.rsvp_deadline).toLocaleDateString('en-US', {
+                  weekday: 'long', month: 'long', day: 'numeric', year: 'numeric'
+                })}
+              </p>
+            </div>
+          )}
 
           <p className="text-sm font-medium text-gray-700 mb-3">
             Will you be attending?
