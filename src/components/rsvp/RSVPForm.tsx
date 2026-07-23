@@ -375,6 +375,22 @@ export default function RSVPForm({ guest, wedding }: Props) {
                 )}
               </div>
 
+              {wedding.rsvp_deadline && !isDeadlinePassed && (
+                <div
+                  className="mb-5 p-4 rounded-2xl text-center border-2"
+                  style={{ borderColor: primary, backgroundColor: `${primary}15` }}
+                >
+                  <p className="text-xs uppercase tracking-widest font-bold mb-1" style={{ color: primary }}>
+                    ⏰ RSVP Deadline
+                  </p>
+                  <p className="text-lg font-extrabold text-gray-800">
+                    {new Date(wedding.rsvp_deadline).toLocaleDateString('en-US', {
+                      weekday: 'long', month: 'long', day: 'numeric', year: 'numeric'
+                    })}
+                  </p>
+                </div>
+              )}
+
               {guest.rsvp_status !== 'pending' ? (
                 <div className="space-y-3">
                   <div
@@ -391,6 +407,7 @@ export default function RSVPForm({ guest, wedding }: Props) {
                     Update My RSVP
                   </button>
                 </div>
+
               ) : (
                 <button
                   onClick={() => setStep('form')}
@@ -482,22 +499,6 @@ export default function RSVPForm({ guest, wedding }: Props) {
                   </button>
                 ))}
               </div>
-            </div>
-          )}
-
-          {wedding.rsvp_deadline && !isDeadlinePassed && (
-            <div
-              className="mb-5 p-4 rounded-2xl text-center border-2"
-              style={{ borderColor: primary, backgroundColor: `${primary}15` }}
-            >
-              <p className="text-xs uppercase tracking-widest font-bold mb-1" style={{ color: primary }}>
-                ⏰ RSVP Deadline
-              </p>
-              <p className="text-lg font-extrabold text-gray-800">
-                {new Date(wedding.rsvp_deadline).toLocaleDateString('en-US', {
-                  weekday: 'long', month: 'long', day: 'numeric', year: 'numeric'
-                })}
-              </p>
             </div>
           )}
 
