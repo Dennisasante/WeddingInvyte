@@ -3,54 +3,41 @@ import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
 import {
   Heart, CheckCircle2, Mail, Users, LayoutGrid, QrCode,
-  Sparkles, ArrowRight, Star, MessageCircle, Quote
+  ArrowRight, Star, MessageCircle, Quote, MapPin, Calendar as CalendarIcon
 } from 'lucide-react'
 
 /* ------------------------------------------------------------------ */
-/*  Scroll reveal hook                                                 */
+/*  Scroll reveal                                                      */
 /* ------------------------------------------------------------------ */
 function useReveal() {
   const ref = useRef<HTMLDivElement>(null)
   const [visible, setVisible] = useState(false)
-
   useEffect(() => {
     const el = ref.current
     if (!el) return
     const obs = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setVisible(true)
-          obs.disconnect()
-        }
-      },
+      ([entry]) => { if (entry.isIntersecting) { setVisible(true); obs.disconnect() } },
       { threshold: 0.15 }
     )
     obs.observe(el)
     return () => obs.disconnect()
   }, [])
-
   return { ref, visible }
 }
 
-function Reveal({
-  children,
-  delay = 0,
-  className = '',
-}: {
-  children: React.ReactNode
-  delay?: number
-  className?: string
+function Reveal({ children, delay = 0, className = '' }: {
+  children: React.ReactNode; delay?: number; className?: string
 }) {
   const { ref, visible } = useReveal()
   return (
     <div
       ref={ref}
       className={className}
-      style={
-        visible
-          ? { opacity: 1, transform: 'translateY(0px)', transition: `opacity 0.8s cubic-bezier(0.16,1,0.3,1) ${delay}ms, transform 0.8s cubic-bezier(0.16,1,0.3,1) ${delay}ms` }
-          : { opacity: 0, transform: 'translateY(28px)' }
-      }
+      style={{
+        opacity: visible ? 1 : 0,
+        transform: visible ? 'translateY(0px)' : 'translateY(24px)',
+        transition: `opacity 0.7s cubic-bezier(0.16,1,0.3,1) ${delay}ms, transform 0.7s cubic-bezier(0.16,1,0.3,1) ${delay}ms`,
+      }}
       suppressHydrationWarning
     >
       {children}
@@ -59,412 +46,412 @@ function Reveal({
 }
 
 /* ------------------------------------------------------------------ */
-/*  Floating decorative petal / sparkle                                */
+/*  Palette                                                             */
 /* ------------------------------------------------------------------ */
-function Floaty({
-  children,
-  className = '',
-  duration = 6,
-  delay = 0,
-}: {
-  children: React.ReactNode
-  className?: string
-  duration?: number
-  delay?: number
-}) {
-  return (
-    <div
-      className={`absolute pointer-events-none select-none ${className}`}
-      style={{
-        animation: `floaty ${duration}s ease-in-out ${delay}s infinite`,
-      }}
-    >
-      {children}
-    </div>
-  )
-}
+const WINE = '#4A1224'
+const WINE_LIGHT = '#6B2038'
+const CREAM = '#FBF6EE'
+const GOLD = '#C9A227'
 
 export default function LandingPage() {
   const [scrolled, setScrolled] = useState(false)
+  const [envelopeOpen, setEnvelopeOpen] = useState(false)
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20)
     window.addEventListener('scroll', onScroll)
-    return () => window.removeEventListener('scroll', onScroll)
+    const t = setTimeout(() => setEnvelopeOpen(true), 700)
+    return () => { window.removeEventListener('scroll', onScroll); clearTimeout(t) }
   }, [])
 
   return (
-    <div className="min-h-screen bg-[#FFFBF5] font-sans overflow-x-hidden">
+    <div className="min-h-screen font-sans overflow-x-hidden" style={{ backgroundColor: CREAM }}>
 
       {/* ============================================================ */}
       {/*  NAV                                                          */}
       {/* ============================================================ */}
       <nav
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled
-          ? 'bg-white/85 backdrop-blur-xl shadow-sm border-b border-amber-100'
-          : 'bg-transparent'
-          }`}
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+          scrolled ? 'backdrop-blur-xl shadow-sm' : ''
+        }`}
+        style={{ backgroundColor: scrolled ? 'rgba(251,246,238,0.92)' : 'transparent' }}
       >
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="text-2xl">💍</span>
-            <span className="font-display font-bold text-gray-900 text-lg tracking-tight">
+            <span
+              className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-serif-display font-bold"
+              style={{ backgroundColor: WINE, color: GOLD }}
+            >
+              WI
+            </span>
+            <span className="font-serif-display font-semibold text-lg tracking-tight" style={{ color: WINE }}>
               Wedding Invyte
             </span>
           </div>
           <div className="flex items-center gap-3">
             <Link
               href="/login"
-              className="text-sm text-gray-600 hover:text-gray-900 font-medium transition hidden sm:block"
+              className="text-sm font-medium transition hidden sm:block"
+              style={{ color: WINE }}
             >
               Sign In
             </Link>
             <Link
               href="/signup"
-              className="btn-shine text-sm bg-[#1B2A4A] hover:bg-[#26386b] text-white px-5 py-2.5 rounded-full font-semibold transition shadow-sm hover:shadow-lg hover:shadow-[#1B2A4A]/20"
+              className="wine-btn text-sm text-white px-5 py-2.5 rounded-full font-medium transition shadow-sm"
+              style={{ backgroundColor: WINE }}
             >
-              Get Started Free
+              Get Started
             </Link>
           </div>
         </div>
       </nav>
 
       {/* ============================================================ */}
-      {/*  HERO                                                         */}
+      {/*  HERO — split layout with envelope reveal                     */}
       {/* ============================================================ */}
-      <section className="relative pt-40 pb-28 px-6 text-center overflow-hidden">
-        {/* Animated gradient blobs */}
-        <div
-          className="absolute -top-32 left-1/2 -translate-x-1/2 w-[900px] h-[900px] rounded-full opacity-60 blur-3xl pointer-events-none"
-          style={{
-            background: 'radial-gradient(circle, #FDE9C8 0%, #FCEEDB 35%, transparent 70%)',
-            animation: 'gradientMove 12s ease-in-out infinite',
-            backgroundSize: '200% 200%',
-          }}
-        />
-        <div
-          className="absolute top-40 right-0 w-96 h-96 rounded-full opacity-40 blur-3xl pointer-events-none"
-          style={{ background: 'radial-gradient(circle, #F4C9C9 0%, transparent 70%)' }}
-        />
+      <section className="relative pt-36 pb-20 px-6">
+        <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
 
-        {/* Floating decorative glyphs */}
-        <Floaty className="top-24 left-[8%] text-4xl opacity-70" duration={7}>🌸</Floaty>
-        <Floaty className="top-52 right-[10%] text-3xl opacity-60" duration={8} delay={1}>✨</Floaty>
-        <Floaty className="bottom-10 left-[15%] text-3xl opacity-50" duration={9} delay={0.5}>💐</Floaty>
-        <Floaty className="top-16 right-[22%] text-2xl opacity-60" duration={6} delay={2}>💍</Floaty>
-
-        <div className="relative max-w-4xl mx-auto">
-          <div
-            className="inline-flex items-center gap-2 bg-white border border-amber-200 text-amber-700 text-xs font-semibold px-4 py-2 rounded-full mb-8 uppercase tracking-wider shadow-sm"
-            style={{ animation: 'floaty-slow 5s ease-in-out infinite' }}
-          >
-            <Sparkles size={13} className="text-amber-500" />
-            Digital Wedding Invitations, Reimagined
-          </div>
-
-          <h1 className="font-display text-5xl md:text-7xl font-bold text-gray-900 leading-[1.08] mb-6 tracking-tight">
-            Your wedding,
-            <br />
-            <span className="gradient-text italic">perfectly invited.</span>
-          </h1>
-
-          <p className="text-lg md:text-xl text-gray-500 mb-10 max-w-2xl mx-auto leading-relaxed">
-            Send breathtaking personalised invitations over WhatsApp and email,
-            watch RSVPs roll in live, and design your seating chart —
-            all from one beautifully simple dashboard.
-          </p>
-
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link
-              href="/signup"
-              className="btn-shine group w-full sm:w-auto bg-[#D4A373] hover:bg-[#c49060] text-white px-10 py-4 rounded-full font-bold text-base transition shadow-xl shadow-amber-300/40 flex items-center justify-center gap-2"
-              style={{ animation: 'pulseGlow 2.8s ease-in-out infinite' }}
+          {/* Left — copy */}
+          <Reveal>
+            <p
+              className="font-script text-xl mb-3"
+              style={{ color: GOLD }}
             >
-              Create Your Wedding — Free
-              <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
-            </Link>
-            <Link
-              href="/login"
-              className="w-full sm:w-auto border border-gray-200 bg-white/70 backdrop-blur text-gray-700 hover:bg-white px-10 py-4 rounded-full font-semibold text-base transition"
+              For couples who want it done right
+            </p>
+            <h1
+              className="font-serif-display text-5xl md:text-6xl font-semibold leading-[1.1] mb-6 tracking-tight"
+              style={{ color: WINE }}
             >
-              Sign In
-            </Link>
-          </div>
-          <p className="text-sm text-gray-400 mt-5">
-            No credit card required · Set up in under 5 minutes
-          </p>
+              Wedding planning,
+              <br />
+              <span className="gold-shimmer italic">without the chaos.</span>
+            </h1>
+            <p className="text-lg text-gray-600 mb-9 max-w-md leading-relaxed">
+              Send elegant digital invitations, watch RSVPs arrive in
+              real time, and organise seating from a single dashboard —
+              built by a small studio that cares about weddings as much
+              as you do.
+            </p>
+            <div className="flex flex-col sm:flex-row items-start gap-4">
+              <Link
+                href="/signup"
+                className="wine-btn group inline-flex items-center gap-2 text-white px-9 py-4 rounded-full font-medium text-base transition shadow-lg"
+                style={{ backgroundColor: WINE, boxShadow: `0 12px 30px -8px ${WINE}66` }}
+              >
+                Start Planning — Free
+                <ArrowRight size={17} className="group-hover:translate-x-1 transition-transform" />
+              </Link>
+              <Link
+                href="/login"
+                className="inline-flex items-center px-9 py-4 rounded-full font-medium text-base border transition"
+                style={{ borderColor: `${WINE}30`, color: WINE }}
+              >
+                Sign In
+              </Link>
+            </div>
+            <div className="flex items-center gap-2 mt-8 text-sm text-gray-400">
+              <div className="flex -space-x-2">
+                {['E', 'K', 'A'].map((l, i) => (
+                  <span
+                    key={i}
+                    className="w-7 h-7 rounded-full border-2 border-white flex items-center justify-center text-[11px] font-medium text-white"
+                    style={{ backgroundColor: [WINE, WINE_LIGHT, GOLD][i] }}
+                  >
+                    {l}
+                  </span>
+                ))}
+              </div>
+              <span>Trusted by couples planning their big day right now</span>
+            </div>
+          </Reveal>
+
+          {/* Right — envelope + card mockup */}
+          <Reveal delay={150}>
+            <div className="relative max-w-sm mx-auto" style={{ perspective: '1200px' }}>
+              {/* Envelope back */}
+              <div
+                className="relative rounded-2xl shadow-2xl overflow-hidden"
+                style={{ backgroundColor: WINE }}
+              >
+                {/* Envelope flap */}
+                <div
+                  className="absolute top-0 left-0 right-0 origin-top transition-transform duration-1000 ease-out z-20"
+                  style={{
+                    height: '55%',
+                    transform: envelopeOpen ? 'rotateX(-170deg)' : 'rotateX(0deg)',
+                    transformStyle: 'preserve-3d',
+                    background: `linear-gradient(160deg, ${WINE_LIGHT}, ${WINE})`,
+                    clipPath: 'polygon(0 0, 100% 0, 50% 100%)',
+                  }}
+                />
+
+                <div className="pt-20 pb-10 px-8 text-center relative z-10">
+                  <p className="font-script text-2xl mb-1" style={{ color: GOLD }}>
+                    Emma
+                  </p>
+                  <p className="text-white/40 text-xs uppercase tracking-[0.3em] my-1">&amp;</p>
+                  <p className="font-script text-2xl" style={{ color: GOLD }}>
+                    James
+                  </p>
+                  <div className="w-10 h-px mx-auto my-5" style={{ backgroundColor: `${GOLD}60` }} />
+                  <p className="text-white/70 text-xs tracking-wide">06 . 12 . 2026</p>
+                </div>
+              </div>
+
+              {/* Card that rises from behind */}
+              <div
+                className="absolute left-1/2 -translate-x-1/2 w-[86%] rounded-xl bg-white shadow-2xl overflow-hidden transition-all duration-1000"
+                style={{
+                  bottom: envelopeOpen ? '-15%' : '2%',
+                  opacity: envelopeOpen ? 1 : 0,
+                  zIndex: 5,
+                }}
+              >
+                <div className="p-5 text-center">
+                  <p className="text-[10px] uppercase tracking-[0.25em] mb-2" style={{ color: GOLD }}>
+                    Kindly Reply
+                  </p>
+                  <div className="flex items-center justify-center gap-2 mb-3">
+                    <div className="flex-1 h-px" style={{ backgroundColor: `${WINE}25` }} />
+                    <Heart size={11} style={{ color: WINE }} fill={WINE} />
+                    <div className="flex-1 h-px" style={{ backgroundColor: `${WINE}25` }} />
+                  </div>
+                  <p className="text-xs text-gray-400 mb-1">You are cordially invited,</p>
+                  <p className="font-serif-display font-semibold text-sm mb-4" style={{ color: WINE }}>
+                    Kwame Mensah
+                  </p>
+                  <button
+                    className="w-full py-2.5 rounded-full text-white text-xs font-medium"
+                    style={{ backgroundColor: WINE }}
+                  >
+                    RSVP Now
+                  </button>
+                </div>
+              </div>
+
+              {/* Floating live badge */}
+              <div
+                className="absolute -right-6 top-8 bg-white rounded-xl shadow-xl px-3 py-2.5 border hidden md:flex items-center gap-2"
+                style={{ borderColor: `${WINE}15`, animation: 'softFloat 5s ease-in-out infinite' }}
+              >
+                <div className="w-7 h-7 rounded-full flex items-center justify-center" style={{ backgroundColor: '#DCFCE7' }}>
+                  <CheckCircle2 size={14} className="text-green-600" />
+                </div>
+                <div>
+                  <p className="text-[11px] font-semibold text-gray-800">RSVP received</p>
+                  <p className="text-[9px] text-gray-400">2 mins ago</p>
+                </div>
+              </div>
+            </div>
+          </Reveal>
         </div>
       </section>
 
       {/* ============================================================ */}
-      {/*  INVITATION PREVIEW — floating tilted card                    */}
+      {/*  TRUST STRIP                                                  */}
       {/* ============================================================ */}
-      <section className="py-10 px-6 relative">
-        <Reveal className="max-w-sm mx-auto relative">
-          <p className="text-center text-xs uppercase tracking-[0.2em] text-amber-500 font-bold mb-8">
-            What Your Guests Will See
-          </p>
+      <section className="py-8 px-6 border-y" style={{ borderColor: `${WINE}12` }}>
+        <Reveal>
+          <div className="max-w-3xl mx-auto flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm" style={{ color: `${WINE}99` }}>
+            <div className="flex items-center gap-1.5">
+              {[1, 2, 3, 4, 5].map(i => (
+                <Star key={i} size={13} style={{ color: GOLD }} fill={GOLD} />
+              ))}
+              <span className="ml-2 font-medium" style={{ color: WINE }}>Rated by real couples</span>
+            </div>
+            <span style={{ color: `${WINE}30` }}>•</span>
+            <span className="flex items-center gap-1.5">
+              <MessageCircle size={14} /> Invitations sent over WhatsApp &amp; Email
+            </span>
+            <span style={{ color: `${WINE}30` }}>•</span>
+            <span>Guests need nothing but the link</span>
+          </div>
+        </Reveal>
+      </section>
 
-          <div className="relative">
-            {/* Glow behind card */}
-            <div className="absolute inset-0 bg-gradient-to-br from-amber-200 to-rose-200 rounded-[2rem] blur-2xl opacity-40 scale-95" />
+      {/* ============================================================ */}
+      {/*  WHY COUPLES CHOOSE US — dark band                            */}
+      {/* ============================================================ */}
+      <section className="py-24 px-6" style={{ backgroundColor: WINE }}>
+        <div className="max-w-6xl mx-auto">
+          <Reveal className="text-center mb-16">
+            <p className="font-script text-xl mb-2" style={{ color: GOLD }}>
+              What changes for you
+            </p>
+            <h2 className="font-serif-display text-4xl md:text-5xl font-semibold text-white tracking-tight">
+              A calmer way to plan
+            </h2>
+          </Reveal>
 
-            <div
-              className="relative rounded-[2rem] overflow-hidden shadow-2xl border border-white/60"
-              style={{
-                animation: 'floaty-slow 7s ease-in-out infinite',
-                transform: 'rotate(-2deg)',
-              }}
-            >
-              <div
-                className="h-52 flex flex-col items-center justify-end pb-6 text-center px-4 relative"
-                style={{ background: 'linear-gradient(160deg, #A88A63 0%, #5C4A32 100%)' }}
-              >
-                <div className="absolute inset-0 opacity-20"
-                  style={{ backgroundImage: 'radial-gradient(circle at 30% 20%, white 0%, transparent 50%)' }} />
-                <p className="text-white/70 text-xs uppercase tracking-widest mb-2 relative">
-                  Together with their families
-                </p>
-                <h2 className="font-display text-white font-bold text-3xl relative">
-                  Emma & James
-                </h2>
-              </div>
-              <div className="bg-[#FEFAE0] p-7 text-center">
-                <div className="flex items-center gap-3 mb-5">
-                  <div className="flex-1 h-px bg-[#D4A373]/40" />
-                  <Sparkles size={12} className="text-[#D4A373]" />
-                  <div className="flex-1 h-px bg-[#D4A373]/40" />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {[
+              {
+                title: 'No more guest-list spreadsheets',
+                desc: 'Every name, number, and RSVP lives in one place — searchable, editable, always up to date.',
+              },
+              {
+                title: 'No more "did they get the invite?"',
+                desc: 'See exactly who opened their invitation and who has responded, the moment it happens.',
+              },
+              {
+                title: 'No more seating chart guesswork',
+                desc: 'Drag guests onto tables visually, track capacity as you go, and print the chart when ready.',
+              },
+            ].map(({ title, desc }, i) => (
+              <Reveal key={title} delay={i * 100}>
+                <div className="border-t pt-6" style={{ borderColor: `${GOLD}40` }}>
+                  <h3 className="font-serif-display text-white text-lg font-medium mb-2">{title}</h3>
+                  <p className="text-white/60 text-sm leading-relaxed">{desc}</p>
                 </div>
-                <p className="text-[#8B7355] text-xs uppercase tracking-widest mb-3 font-semibold">
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ============================================================ */}
+      {/*  ITINERARY-STYLE FEATURE LIST                                 */}
+      {/* ============================================================ */}
+      <section className="py-24 px-6">
+        <div className="max-w-3xl mx-auto">
+          <Reveal className="text-center mb-14">
+            <p className="font-script text-xl mb-2" style={{ color: GOLD }}>
+              Everything, in order
+            </p>
+            <h2 className="font-serif-display text-4xl font-semibold tracking-tight" style={{ color: WINE }}>
+              From first invite to last dance
+            </h2>
+          </Reveal>
+
+          <div className="relative pl-8">
+            <div
+              className="absolute left-[11px] top-2 bottom-2 w-px"
+              style={{ backgroundColor: `${WINE}20` }}
+            />
+            {[
+              { icon: Mail, time: 'Step 1', title: 'Send invitations', desc: 'Personalised links go out over WhatsApp or email — each one opens a branded invitation card.' },
+              { icon: CheckCircle2, time: 'Step 2', title: 'Track every RSVP', desc: 'Responses land on your dashboard instantly, with dietary notes and messages attached.' },
+              { icon: Users, time: 'Step 3', title: 'Manage your guest list', desc: 'Add, edit, or bulk-import guests. Everything stays organised in one searchable list.' },
+              { icon: LayoutGrid, time: 'Step 4', title: 'Plan the seating', desc: 'Drag and drop guests onto tables, watch capacity update live, then print the chart.' },
+              { icon: QrCode, time: 'Step 5', title: 'Check guests in', desc: 'On the day itself, check arrivals off a live list — no clipboard required.' },
+            ].map(({ icon: Icon, time, title, desc }, i) => (
+              <Reveal key={title} delay={i * 90}>
+                <div className="relative mb-10 last:mb-0">
+                  <div
+                    className="absolute -left-8 w-6 h-6 rounded-full flex items-center justify-center"
+                    style={{ backgroundColor: CREAM, border: `2px solid ${WINE}` }}
+                  >
+                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: WINE }} />
+                  </div>
+                  <p className="text-xs font-medium uppercase tracking-widest mb-1" style={{ color: GOLD }}>
+                    {time}
+                  </p>
+                  <div className="flex items-start gap-3">
+                    <div
+                      className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                      style={{ backgroundColor: `${WINE}0d` }}
+                    >
+                      <Icon size={18} style={{ color: WINE }} />
+                    </div>
+                    <div>
+                      <h3 className="font-serif-display font-semibold text-lg mb-1" style={{ color: WINE }}>
+                        {title}
+                      </h3>
+                      <p className="text-gray-500 text-sm leading-relaxed">{desc}</p>
+                    </div>
+                  </div>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ============================================================ */}
+      {/*  DETAILS CARD — dress code / rsvp deadline style mock          */}
+      {/* ============================================================ */}
+      <section className="py-24 px-6" style={{ backgroundColor: `${WINE}06` }}>
+        <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+          <Reveal>
+            <p className="font-script text-xl mb-2" style={{ color: GOLD }}>
+              Guests see it too
+            </p>
+            <h2 className="font-serif-display text-3xl md:text-4xl font-semibold mb-5 tracking-tight" style={{ color: WINE }}>
+              An invitation that feels like an invitation
+            </h2>
+            <p className="text-gray-600 leading-relaxed mb-6">
+              No generic forms. Guests open a link and see your names, your
+              photo, your venue, and your RSVP deadline in bold — the same
+              warmth as a printed card, with none of the printing.
+            </p>
+            <ul className="space-y-3">
+              {[
+                'Cover photo and couple photo, your choice',
+                'Custom or default wording — you control it',
+                'Impossible-to-miss RSVP deadline',
+                'Directions and venue map built in',
+              ].map(item => (
+                <li key={item} className="flex items-start gap-2 text-sm text-gray-600">
+                  <CheckCircle2 size={16} style={{ color: WINE }} className="mt-0.5 flex-shrink-0" />
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </Reveal>
+
+          <Reveal delay={150}>
+            <div
+              className="rounded-2xl overflow-hidden shadow-xl mx-auto max-w-xs"
+              style={{ border: `1px solid ${WINE}20` }}
+            >
+              <div className="p-5 text-center" style={{ backgroundColor: '#fff' }}>
+                <p className="text-[10px] uppercase tracking-widest mb-3" style={{ color: GOLD }}>
                   Request the pleasure of your company
                 </p>
-                <p className="text-gray-700 font-bold text-lg">Saturday</p>
-                <p className="text-gray-500 text-sm mb-3">December 20, 2026</p>
-                <p className="text-gray-400 text-xs mb-5">📍 The Grand Ballroom, Accra</p>
-                <div className="bg-[#D4A373]/10 rounded-2xl p-4 mb-5">
-                  <p className="text-xs text-gray-400 mb-0.5">You are invited,</p>
-                  <p className="font-bold text-gray-800">Kwame Mensah</p>
+                <div className="flex items-center justify-center gap-2 mb-1" style={{ color: WINE }}>
+                  <CalendarIcon size={13} />
+                  <p className="text-sm font-medium">Saturday, Dec 20 2026</p>
                 </div>
-                <button
-                  className="btn-shine w-full py-3.5 rounded-2xl text-white font-bold text-sm shadow-lg shadow-amber-300/50"
-                  style={{ backgroundColor: '#D4A373' }}
+                <div className="flex items-center justify-center gap-1 text-xs text-gray-400 mb-4">
+                  <MapPin size={11} /> The Grand Ballroom, Accra
+                </div>
+                <div
+                  className="rounded-xl p-3 mb-4 border-2"
+                  style={{ borderColor: WINE, backgroundColor: `${WINE}0d` }}
                 >
-                  RSVP Now 💌
+                  <p className="text-[10px] uppercase tracking-widest font-bold mb-0.5" style={{ color: WINE }}>
+                    RSVP Deadline
+                  </p>
+                  <p className="font-serif-display font-bold" style={{ color: WINE }}>
+                    Nov 1, 2026
+                  </p>
+                </div>
+                <button className="w-full py-3 rounded-full text-white text-sm font-medium" style={{ backgroundColor: WINE }}>
+                  RSVP Now
                 </button>
               </div>
             </div>
-
-            {/* floating badge */}
-            <div
-              className="absolute -right-6 top-16 bg-white rounded-2xl shadow-xl px-4 py-3 border border-amber-100 hidden md:block"
-              style={{ animation: 'floaty 5s ease-in-out infinite', animationDelay: '1s' }}
-            >
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                  <CheckCircle2 size={16} className="text-green-600" />
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-gray-800">RSVP Received</p>
-                  <p className="text-[10px] text-gray-400">Just now</p>
-                </div>
-              </div>
-            </div>
-
-            <div
-              className="absolute -left-8 bottom-24 bg-white rounded-2xl shadow-xl px-4 py-3 border border-amber-100 hidden md:block"
-              style={{ animation: 'floaty 6s ease-in-out infinite', animationDelay: '2s' }}
-            >
-              <div className="flex items-center gap-2">
-                <MessageCircle size={16} className="text-green-500" />
-                <p className="text-xs font-bold text-gray-800">Sent via WhatsApp</p>
-              </div>
-            </div>
-          </div>
-        </Reveal>
-      </section>
-
-      {/* ============================================================ */}
-      {/*  SOCIAL PROOF STRIP                                           */}
-      {/* ============================================================ */}
-      <section className="py-10 px-6 mt-8">
-        <Reveal>
-          <div className="max-w-3xl mx-auto flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm text-gray-500">
-            <div className="flex items-center gap-1.5">
-              {[1, 2, 3, 4, 5].map(i => (
-                <Star key={i} size={15} className="text-amber-400 fill-amber-400" />
-              ))}
-              <span className="ml-2 text-gray-700 font-semibold">Loved by couples</span>
-            </div>
-            <span className="text-gray-300">•</span>
-            <span className="flex items-center gap-1.5">
-              <MessageCircle size={14} className="text-green-500" /> Works on WhatsApp & Email
-            </span>
-            <span className="text-gray-300">•</span>
-            <span>No app download needed for guests</span>
-          </div>
-        </Reveal>
-      </section>
-
-      {/* ============================================================ */}
-      {/*  FEATURES                                                     */}
-      {/* ============================================================ */}
-      <section className="py-24 px-6 relative">
-        <div
-          className="absolute top-1/2 left-0 w-72 h-72 rounded-full opacity-30 blur-3xl -translate-y-1/2"
-          style={{ background: 'radial-gradient(circle, #E8D5B5 0%, transparent 70%)' }}
-        />
-        <div className="max-w-6xl mx-auto relative">
-          <Reveal className="text-center mb-16">
-            <p className="text-amber-500 text-xs font-bold uppercase tracking-[0.2em] mb-3">
-              Everything You Need
-            </p>
-            <h2 className="font-display text-4xl md:text-5xl font-bold text-gray-900 mb-4 tracking-tight">
-              One place for the whole day
-            </h2>
-            <p className="text-gray-400 text-lg max-w-xl mx-auto">
-              From the first invite to the last dance — Wedding Invite handles it all
-            </p>
           </Reveal>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[
-              {
-                icon: Mail,
-                title: 'WhatsApp & Email Invites',
-                desc: 'Send personalised invite links directly to your guests via WhatsApp or email. Each link opens a beautiful, branded invitation card.',
-                color: 'bg-green-50 text-green-600',
-              },
-              {
-                icon: CheckCircle2,
-                title: 'Real-Time RSVP Tracking',
-                desc: 'Watch responses arrive live on your dashboard. See who is attending, who declined, and who has not responded yet.',
-                color: 'bg-blue-50 text-blue-600',
-              },
-              {
-                icon: Users,
-                title: 'Effortless Guest Management',
-                desc: 'Add guests one by one or import hundreds from a spreadsheet. Edit, delete, and organise with bulk actions.',
-                color: 'bg-purple-50 text-purple-600',
-              },
-              {
-                icon: LayoutGrid,
-                title: 'Drag & Drop Seating',
-                desc: 'Arrange your reception tables visually. Drag guests onto tables, track seat capacity, and print table cards.',
-                color: 'bg-amber-50 text-amber-600',
-              },
-              {
-                icon: QrCode,
-                title: 'QR Code Invitations',
-                desc: 'Generate a QR code for each guest. Print it on physical stationery — guests scan and RSVP in seconds.',
-                color: 'bg-rose-50 text-rose-600',
-              },
-              {
-                icon: Heart,
-                title: 'Plus-One Control',
-                desc: 'Decide who can bring a plus one. Approve or decline requests individually — they are tracked and counted in your seating.',
-                color: 'bg-pink-50 text-pink-600',
-              },
-            ].map(({ icon: Icon, title, desc, color }, i) => (
-              <Reveal key={title} delay={i * 90}>
-                <div className="card-lift bg-white rounded-3xl p-7 border border-gray-100 h-full">
-                  <div className={`w-12 h-12 ${color} rounded-2xl flex items-center justify-center mb-5`}>
-                    <Icon size={21} />
-                  </div>
-                  <h3 className="font-bold text-gray-900 mb-2 text-base">{title}</h3>
-                  <p className="text-sm text-gray-500 leading-relaxed">{desc}</p>
-                </div>
-              </Reveal>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ============================================================ */}
-      {/*  HOW IT WORKS                                                 */}
-      {/* ============================================================ */}
-      <section className="py-28 px-6 bg-[#1B2A4A] relative overflow-hidden">
-        <div
-          className="absolute -top-40 -right-40 w-96 h-96 rounded-full opacity-20 blur-3xl"
-          style={{ background: 'radial-gradient(circle, #D4A373 0%, transparent 70%)' }}
-        />
-        <div
-          className="absolute -bottom-40 -left-40 w-96 h-96 rounded-full opacity-10 blur-3xl"
-          style={{ background: 'radial-gradient(circle, #F4C9C9 0%, transparent 70%)' }}
-        />
-        <div className="max-w-3xl mx-auto relative">
-          <Reveal className="text-center mb-16">
-            <p className="text-amber-300 text-xs font-bold uppercase tracking-[0.2em] mb-3">
-              Simple By Design
-            </p>
-            <h2 className="font-display text-4xl md:text-5xl font-bold text-white mb-4 tracking-tight">
-              Up and running in minutes
-            </h2>
-            <p className="text-gray-400 text-lg">No technical knowledge needed — ever</p>
-          </Reveal>
-
-          <div className="space-y-5">
-            {[
-              {
-                step: '01',
-                title: 'Create your account',
-                desc: 'Sign up with your email or Google account. Either the bride or groom creates the account first.',
-              },
-              {
-                step: '02',
-                title: 'Set up your wedding in 2 minutes',
-                desc: 'Enter your names, wedding date, and venue. Choose a colour theme that matches your wedding aesthetic.',
-              },
-              {
-                step: '03',
-                title: 'Invite your partner',
-                desc: 'Send an invite link to your partner from Settings. They join with their own account and both of you have full access.',
-              },
-              {
-                step: '04',
-                title: 'Add guests and send invites',
-                desc: 'Build your guest list and send personalised invite links via WhatsApp. Guests RSVP by tapping the link — no sign up needed.',
-              },
-            ].map(({ step, title, desc }, i) => (
-              <Reveal key={step} delay={i * 100}>
-                <div className="flex gap-5 items-start group">
-                  <div
-                    className="w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-sm flex-shrink-0 transition-transform group-hover:scale-110"
-                    style={{ backgroundColor: '#D4A373', color: 'white' }}
-                  >
-                    {step}
-                  </div>
-                  <div className="bg-white/5 hover:bg-white/10 rounded-2xl p-5 flex-1 border border-white/10 transition-colors">
-                    <h3 className="font-bold text-white mb-1">{title}</h3>
-                    <p className="text-sm text-gray-400 leading-relaxed">{desc}</p>
-                  </div>
-                </div>
-              </Reveal>
-            ))}
-          </div>
         </div>
       </section>
 
       {/* ============================================================ */}
       {/*  TESTIMONIAL                                                  */}
       {/* ============================================================ */}
-      <section className="py-28 px-6 relative">
-        <Floaty className="top-8 left-[12%] text-3xl opacity-40" duration={8}>🌿</Floaty>
-        <Floaty className="bottom-8 right-[12%] text-3xl opacity-40" duration={7} delay={1}>🌸</Floaty>
-        <Reveal className="max-w-2xl mx-auto text-center relative">
-          <div className="w-14 h-14 rounded-full bg-amber-50 flex items-center justify-center mx-auto mb-6">
-            <Quote size={22} className="text-amber-400" />
-          </div>
-          <blockquote className="font-display text-2xl md:text-3xl font-medium text-gray-800 leading-relaxed mb-6 italic">
-            "We managed 280 guests without a single spreadsheet.
-            Every RSVP came in through WhatsApp and we could
-            see everything in real time."
+      <section className="py-24 px-6">
+        <Reveal className="max-w-2xl mx-auto text-center">
+          <Quote size={26} style={{ color: GOLD }} className="mx-auto mb-6" />
+          <blockquote className="font-serif-display text-2xl md:text-3xl font-medium leading-relaxed mb-6 italic" style={{ color: WINE }}>
+            "It felt less like software and more like someone had
+            actually planned a wedding before building it."
           </blockquote>
-          <p className="text-gray-400 text-sm font-medium">
-            — Abena &amp; Kweku, Accra · December 2025
-          </p>
+          <p className="text-gray-400 text-sm">— Abena &amp; Kweku, Accra</p>
           <div className="flex items-center justify-center gap-1 mt-3">
             {[1, 2, 3, 4, 5].map(i => (
-              <Star key={i} size={16} className="text-amber-400 fill-amber-400" />
+              <Star key={i} size={14} style={{ color: GOLD }} fill={GOLD} />
             ))}
           </div>
         </Reveal>
@@ -473,78 +460,59 @@ export default function LandingPage() {
       {/* ============================================================ */}
       {/*  FINAL CTA                                                    */}
       {/* ============================================================ */}
-      <section className="py-28 px-6 relative overflow-hidden">
-        <div
-          className="absolute inset-0 opacity-70"
-          style={{
-            background: 'radial-gradient(ellipse at center, #FDF0DA 0%, #FFFBF5 70%)',
-          }}
-        />
-        <Floaty className="top-10 left-[20%] text-2xl opacity-50" duration={6}>✨</Floaty>
-        <Floaty className="bottom-16 right-[18%] text-2xl opacity-50" duration={7} delay={1.5}>💍</Floaty>
-
-        <Reveal className="max-w-xl mx-auto text-center relative">
-          <div
-            className="text-6xl mb-6 inline-block"
-            style={{ animation: 'floaty-slow 4s ease-in-out infinite' }}
-          >
-            💍
-          </div>
-          <h2 className="font-display text-4xl md:text-5xl font-bold text-gray-900 mb-4 tracking-tight">
-            Ready to plan your wedding?
+      <section className="py-24 px-6" style={{ backgroundColor: WINE }}>
+        <Reveal className="max-w-xl mx-auto text-center">
+          <p className="font-script text-2xl mb-3" style={{ color: GOLD }}>
+            Your wedding, your way
+          </p>
+          <h2 className="font-serif-display text-4xl md:text-5xl font-semibold text-white mb-5 tracking-tight">
+            Let's get you organised
           </h2>
-          <p className="text-gray-500 mb-9 text-lg">
-            Join couples across Ghana who are using Wedding Invite
-            to create unforgettable wedding experiences.
+          <p className="text-white/60 mb-9 text-lg">
+            Set up your wedding page in minutes. No credit card,
+            no learning curve — just less to worry about.
           </p>
           <Link
             href="/signup"
-            className="btn-shine inline-flex items-center gap-2 bg-[#D4A373] hover:bg-[#c49060] text-white px-12 py-4 rounded-full font-bold text-lg transition shadow-2xl shadow-amber-300/50"
-            style={{ animation: 'pulseGlow 2.8s ease-in-out infinite' }}
+            className="wine-btn inline-flex items-center gap-2 px-10 py-4 rounded-full font-medium text-lg transition"
+            style={{ backgroundColor: GOLD, color: WINE }}
           >
             Create Your Wedding — Free
-            <ArrowRight size={20} />
+            <ArrowRight size={19} />
           </Link>
-          <p className="text-sm text-gray-400 mt-5">
-            No credit card · No technical skills · Cancel anytime
-          </p>
         </Reveal>
       </section>
 
       {/* ============================================================ */}
       {/*  FOOTER                                                       */}
       {/* ============================================================ */}
-      <footer className="py-10 px-6 border-t border-amber-100 bg-white">
+      <footer className="py-10 px-6 border-t" style={{ borderColor: `${WINE}12` }}>
         <div className="max-w-6xl mx-auto flex flex-col items-center gap-3">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 w-full">
             <div className="flex items-center gap-2">
-              <span className="text-xl">💍</span>
-              <span className="font-display font-bold text-gray-800">
-                Wedding Invyte
+              <span
+                className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-serif-display font-bold"
+                style={{ backgroundColor: WINE, color: GOLD }}
+              >
+                WI
               </span>
+              <span className="font-serif-display font-semibold" style={{ color: WINE }}>Wedding Invyte</span>
             </div>
-
-            <p className="text-sm text-gray-400 italic font-display">
+            <p className="font-script text-base" style={{ color: `${WINE}80` }}>
               Every love story deserves a beautiful invitation.
             </p>
-
-            <div className="flex items-center gap-6 text-sm text-gray-400">
-              <Link href="/login" className="hover:text-gray-600 transition">
-                Sign In
-              </Link>
-              <Link href="/signup" className="hover:text-gray-600 transition">
-                Get Started
-              </Link>
+            <div className="flex items-center gap-6 text-sm" style={{ color: `${WINE}80` }}>
+              <Link href="/login" className="hover:opacity-70 transition">Sign In</Link>
+              <Link href="/signup" className="hover:opacity-70 transition">Get Started</Link>
             </div>
           </div>
-
-          <p className="text-xs text-gray-300">
-            Wedding Invyte by{" "}
+          <p className="text-xs" style={{ color: `${WINE}50` }}>
+            Wedding Invyte by{' '}
             <a
               href="https://dennisasante.com"
               target="_blank"
               rel="noopener noreferrer"
-              className="underline hover:text-amber-500 transition"
+              className="underline hover:opacity-70 transition"
             >
               Dennis Asante
             </a>

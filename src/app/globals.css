@@ -134,3 +134,61 @@ body {
   transform: translateY(-6px);
   box-shadow: 0 20px 40px -12px rgba(212,163,115,0.25);
 }
+
+/* ============================================================ */
+/*  PREMIUM LANDING PAGE — FONTS & UTILITIES                     */
+/* ============================================================ */
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500&display=swap');
+
+.font-serif-display {
+  font-family: 'Playfair Display', Georgia, serif;
+}
+.font-script {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-style: italic;
+}
+
+@keyframes envelopeOpen {
+  0% { transform: rotateX(0deg); }
+  100% { transform: rotateX(-180deg); }
+}
+@keyframes cardRise {
+  0% { transform: translateY(30px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+@keyframes softFloat {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-14px); }
+}
+@keyframes gleam {
+  0% { background-position: -150% 0; }
+  100% { background-position: 250% 0; }
+}
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.wine-btn {
+  position: relative;
+  overflow: hidden;
+}
+.wine-btn::before {
+  content: '';
+  position: absolute;
+  top: 0; left: -60%;
+  width: 40%; height: 100%;
+  background: linear-gradient(120deg, transparent, rgba(255,255,255,0.35), transparent);
+  transform: skewX(-20deg);
+  transition: left 0.6s ease;
+}
+.wine-btn:hover::before { left: 130%; }
+
+.gold-shimmer {
+  background: linear-gradient(90deg, #C9A227 0%, #F1D77E 25%, #C9A227 50%, #F1D77E 75%, #C9A227 100%);
+  background-size: 300% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: gleam 6s linear infinite;
+}
