@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Heart, MapPin, Calendar } from 'lucide-react'
+import BrandFooter from '@/components/BrandFooter'
 
 interface Wedding {
   id: string
@@ -412,9 +413,7 @@ export default function OpenRSVPForm({ wedding }: { wedding: Wedding }) {
           )}
         </div>
 
-        <p className="text-center text-xs text-gray-300 mt-8">
-          Made with ❤️ by WeddingInvite
-        </p>
+        <BrandFooter />
       </div>
     </div>
   )

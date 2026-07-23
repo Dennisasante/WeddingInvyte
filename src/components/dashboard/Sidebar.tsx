@@ -70,7 +70,7 @@ export default function Sidebar({ profile }: SidebarProps) {
             💍
           </div>
           <div>
-            <p className="font-bold text-gray-800 text-sm">WeddingInvite</p>
+            <p className="font-bold text-gray-800 text-sm">Wedding Invyte</p>
             <p className="text-xs text-amber-600 font-medium">
               {isSuperAdmin ? 'Super Admin' : 'Couple Admin'}
             </p>
@@ -126,6 +126,14 @@ export default function Sidebar({ profile }: SidebarProps) {
         >
           <LogOut size={18} />
           <span>Sign out</span>
+          <a
+            href="https://dennisasante.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block text-center text-[10px] text-gray-300 hover:text-amber-500 mt-3 transition"
+          >
+            Wedding Invyte by Dennis Asante
+          </a>
         </button>
       </div>
     </aside>

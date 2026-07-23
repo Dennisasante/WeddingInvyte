@@ -95,7 +95,7 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-[#FFFBF5] font-sans overflow-x-hidden">
-      
+
       {/* ============================================================ */}
       {/*  NAV                                                          */}
       {/* ============================================================ */}
@@ -109,7 +109,7 @@ export default function LandingPage() {
           <div className="flex items-center gap-2">
             <span className="text-2xl">💍</span>
             <span className="font-display font-bold text-gray-900 text-lg tracking-tight">
-              Wedding Invite
+              Wedding Invyte
             </span>
           </div>
           <div className="flex items-center gap-3">
@@ -515,18 +515,40 @@ export default function LandingPage() {
       {/*  FOOTER                                                       */}
       {/* ============================================================ */}
       <footer className="py-10 px-6 border-t border-amber-100 bg-white">
-        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <span className="text-xl">💍</span>
-            <span className="font-display font-bold text-gray-800">Wedding Invite</span>
+        <div className="max-w-6xl mx-auto flex flex-col items-center gap-3">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 w-full">
+            <div className="flex items-center gap-2">
+              <span className="text-xl">💍</span>
+              <span className="font-display font-bold text-gray-800">
+                Wedding Invyte
+              </span>
+            </div>
+
+            <p className="text-sm text-gray-400 italic font-display">
+              Every love story deserves a beautiful invitation.
+            </p>
+
+            <div className="flex items-center gap-6 text-sm text-gray-400">
+              <Link href="/login" className="hover:text-gray-600 transition">
+                Sign In
+              </Link>
+              <Link href="/signup" className="hover:text-gray-600 transition">
+                Get Started
+              </Link>
+            </div>
           </div>
-          <p className="text-sm text-gray-400 italic font-display">
-            Every love story deserves a beautiful invitation.
+
+          <p className="text-xs text-gray-300">
+            Wedding Invyte by{" "}
+            <a
+              href="https://dennisasante.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline hover:text-amber-500 transition"
+            >
+              Dennis Asante
+            </a>
           </p>
-          <div className="flex items-center gap-6 text-sm text-gray-400">
-            <Link href="/login" className="hover:text-gray-600 transition">Sign In</Link>
-            <Link href="/signup" className="hover:text-gray-600 transition">Get Started</Link>
-          </div>
         </div>
       </footer>
     </div>
