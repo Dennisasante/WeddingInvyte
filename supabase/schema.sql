@@ -294,8 +294,142 @@ begin
 end;
 $$;
 
+-- Fetch a guest's assigned table by token (personal seat-lookup QR).
+create or replace function get_seat_by_token(p_token text)
+returns json
+language plpgsql security definer
+as $$
+declare
+  g guests%rowtype;
+  w weddings%rowtype;
+  t reception_tables%rowtype;
+  result json;
+begin
+  select * into g from guests where invite_token = p_token and deleted_at is null;
+  if not found then
+    return json_build_object('error', 'not_found');
+  end if;
+
+  select * into w from weddings where id = g.wedding_id;
+  if not found or not w.is_active then
+    return json_build_object('error', 'inactive');
+  end if;
+
+  select rt.* into t
+    from seating_assignments sa
+    join reception_tables rt on rt.id = sa.table_id
+    where sa.guest_id = g.id;
+
+  if not found then
+    return json_build_object('error', 'not_seated', 'guest_name', g.name);
+  end if;
+
+  result := json_build_object(
+    'guest_name', g.name,
+    'table_name', t.name,
+    'wedding', json_build_object(
+      'couple_names', w.couple_names,
+      'theme_preset', w.theme_preset,
+      'primary_color', w.primary_color,
+      'secondary_color', w.secondary_color,
+      'accent_color', w.accent_color,
+      'venue_name', w.venue_name,
+      'event_date', w.event_date
+    )
+  );
+  return result;
+end;
+$$;
+
+-- Search a wedding's guests by (partial) name — powers the single shared
+-- "venue QR" flow, where a guest finds themself by typing their name rather
+-- than scanning a personal token.
+create or replace function search_guests_by_name(p_wedding_id uuid, p_query text)
+returns json
+language plpgsql security definer
+as $$
+declare
+  w weddings%rowtype;
+  matches json;
+begin
+  select * into w from weddings where id = p_wedding_id;
+  if not found or not w.is_active then
+    return json_build_object('error', 'inactive');
+  end if;
+
+  if length(trim(p_query)) < 2 then
+    return json_build_object('matches', '[]'::json);
+  end if;
+
+  select coalesce(json_agg(json_build_object('id', m.id, 'name', m.name)), '[]'::json)
+    into matches
+    from (
+      select id, name from guests
+      where wedding_id = p_wedding_id
+        and deleted_at is null
+        and name ilike '%' || trim(p_query) || '%'
+      order by name
+      limit 8
+    ) m;
+
+  return json_build_object('matches', matches);
+end;
+$$;
+
+-- Fetch a guest's assigned table by wedding + guest id (the second step of
+-- the shared venue QR flow, after the guest picks themself from search).
+create or replace function get_seat_by_guest_id(p_wedding_id uuid, p_guest_id uuid)
+returns json
+language plpgsql security definer
+as $$
+declare
+  g guests%rowtype;
+  w weddings%rowtype;
+  t reception_tables%rowtype;
+  result json;
+begin
+  select * into w from weddings where id = p_wedding_id;
+  if not found or not w.is_active then
+    return json_build_object('error', 'inactive');
+  end if;
+
+  select * into g from guests
+    where id = p_guest_id and wedding_id = p_wedding_id and deleted_at is null;
+  if not found then
+    return json_build_object('error', 'not_found');
+  end if;
+
+  select rt.* into t
+    from seating_assignments sa
+    join reception_tables rt on rt.id = sa.table_id
+    where sa.guest_id = g.id;
+
+  if not found then
+    return json_build_object('error', 'not_seated', 'guest_name', g.name);
+  end if;
+
+  result := json_build_object(
+    'guest_name', g.name,
+    'table_name', t.name,
+    'wedding', json_build_object(
+      'couple_names', w.couple_names,
+      'theme_preset', w.theme_preset,
+      'primary_color', w.primary_color,
+      'secondary_color', w.secondary_color,
+      'accent_color', w.accent_color,
+      'venue_name', w.venue_name,
+      'event_date', w.event_date
+    )
+  );
+  return result;
+end;
+$$;
+
 grant execute on function get_invite_by_token(text) to anon, authenticated;
 grant execute on function submit_rsvp(text, text, text, text, boolean) to anon, authenticated;
+grant execute on function get_seat_by_token(text) to anon, authenticated;
+grant execute on function search_guests_by_name(uuid, text) to anon, authenticated;
+grant execute on function get_seat_by_guest_id(uuid, uuid) to anon, authenticated;
 grant execute on function is_super_admin() to authenticated;
 grant execute on function my_wedding_id() to authenticated;
 

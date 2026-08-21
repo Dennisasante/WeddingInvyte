@@ -1,13 +1,16 @@
 'use client'
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Plus, X, Users, Printer } from 'lucide-react'
+import { Plus, X, Users, Printer, Pencil, QrCode, Link2, MessageCircle, CheckCircle } from 'lucide-react'
 import Link from 'next/link'
+import QRCode from 'react-qr-code'
 
 interface Guest {
   id: string
   name: string
   category: string
+  invite_token?: string
+  phone?: string | null
 }
 
 interface SeatingAssignment {
@@ -42,7 +45,23 @@ export default function SeatingManager({
   const [newTableSeats, setNewTableSeats] = useState(8)
   const [addingTable, setAddingTable] = useState(false)
   const [showAddTable, setShowAddTable] = useState(false)
+  const [editingTableId, setEditingTableId] = useState<string | null>(null)
+  const [editTableName, setEditTableName] = useState('')
+  const [qrGuest, setQrGuest] = useState<Guest | null>(null)
+  const [showVenueQr, setShowVenueQr] = useState(false)
+  const [copied, setCopied] = useState(false)
+  const [copiedVenue, setCopiedVenue] = useState(false)
   const supabase = createClient()
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+  const getSeatLink = (token: string) => `${appUrl}/seat/${token}`
+  const venueSeatLink = `${appUrl}/seat/find/${weddingId}`
+
+  const copyVenueLink = async () => {
+    await navigator.clipboard.writeText(venueSeatLink)
+    setCopiedVenue(true)
+    setTimeout(() => setCopiedVenue(false), 2000)
+  }
 
   const getGuestCount = (table: Table) => {
     return table.seating_assignments.reduce((sum, a) => {
@@ -131,6 +150,63 @@ export default function SeatingManager({
     setUnassigned(prev => [...prev, guest])
   }
 
+  const startRenameTable = (table: Table) => {
+    setEditingTableId(table.id)
+    setEditTableName(table.name)
+  }
+
+  const saveTableName = async (tableId: string) => {
+    const trimmed = editTableName.trim()
+    setEditingTableId(null)
+    if (!trimmed) return
+
+    const previous = tables.find(t => t.id === tableId)?.name
+    setTables(prev => prev.map(t =>
+      t.id === tableId ? { ...t, name: trimmed } : t
+    ))
+
+    const { error } = await supabase
+      .from('reception_tables')
+      .update({ name: trimmed })
+      .eq('id', tableId)
+
+    if (error && previous) {
+      setTables(prev => prev.map(t =>
+        t.id === tableId ? { ...t, name: previous } : t
+      ))
+    }
+  }
+
+  const copySeatLink = async (guest: Guest) => {
+    if (!guest.invite_token) return
+    await navigator.clipboard.writeText(getSeatLink(guest.invite_token))
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  const shareSeatWhatsApp = (guest: Guest) => {
+    if (!guest.invite_token) return
+    const link = getSeatLink(guest.invite_token)
+    const lines = [
+      `Hi ${guest.name}!`,
+      ``,
+      `Here's your seat for the big day — tap to see your table:`,
+      link,
+    ]
+    const encoded = encodeURIComponent(lines.join('\n'))
+
+    let cleaned = (guest.phone || '').replace(/\D/g, '')
+    if (cleaned.startsWith('0') && cleaned.length === 10) {
+      cleaned = '233' + cleaned.substring(1)
+    } else if (cleaned.length === 9) {
+      cleaned = '233' + cleaned
+    }
+    window.open(
+      cleaned ? `https://wa.me/${cleaned}?text=${encoded}` : `https://wa.me/?text=${encoded}`,
+      '_blank'
+    )
+  }
+
   const deleteTable = async (tableId: string) => {
     if (!confirm('Delete this table? Guests will be unassigned.')) return
     const table = tables.find(t => t.id === tableId)
@@ -162,6 +238,13 @@ export default function SeatingManager({
             <Printer size={15} />
             Print Chart
           </Link>
+          <button
+            onClick={() => setShowVenueQr(true)}
+            className="flex items-center gap-2 text-sm px-4 py-2.5 border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 transition"
+          >
+            <QrCode size={15} />
+            Venue QR
+          </button>
           <button
             onClick={() => setShowAddTable(true)}
             className="flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-white text-sm px-4 py-2.5 rounded-xl transition"
@@ -302,9 +385,30 @@ export default function SeatingManager({
                   >
                     {/* Table Header */}
                     <div className="flex items-center justify-between mb-3">
-                      <h4 className="font-bold text-gray-800 truncate">
-                        {table.name}
-                      </h4>
+                      {editingTableId === table.id ? (
+                        <input
+                          value={editTableName}
+                          onChange={e => setEditTableName(e.target.value)}
+                          onBlur={() => saveTableName(table.id)}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') saveTableName(table.id)
+                            if (e.key === 'Escape') setEditingTableId(null)
+                          }}
+                          autoFocus
+                          className="font-bold text-gray-800 border-b-2 border-amber-300 focus:outline-none min-w-0 flex-1 mr-2"
+                        />
+                      ) : (
+                        <button
+                          onClick={() => startRenameTable(table)}
+                          className="flex items-center gap-1.5 min-w-0 group/rename text-left"
+                          title="Click to rename"
+                        >
+                          <h4 className="font-bold text-gray-800 truncate">
+                            {table.name}
+                          </h4>
+                          <Pencil size={11} className="text-gray-300 group-hover/rename:text-amber-500 transition flex-shrink-0" />
+                        </button>
+                      )}
                       <div className="flex items-center gap-2">
                         <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${isFull
                           ? 'bg-red-50 text-red-600'
@@ -352,16 +456,25 @@ export default function SeatingManager({
                               </p>
                             )}
                           </div>
-                          <button
-                            onClick={() => removeFromTable(
-                              assignment.id,
-                              table.id,
-                              assignment.guests
-                            )}
-                            className="text-gray-200 hover:text-red-400 transition ml-2"
-                          >
-                            <X size={12} />
-                          </button>
+                          <div className="flex items-center gap-2 ml-2 flex-shrink-0">
+                            <button
+                              onClick={() => setQrGuest(assignment.guests)}
+                              className="text-gray-300 hover:text-amber-500 transition"
+                              title="Seat QR code"
+                            >
+                              <QrCode size={13} />
+                            </button>
+                            <button
+                              onClick={() => removeFromTable(
+                                assignment.id,
+                                table.id,
+                                assignment.guests
+                              )}
+                              className="text-gray-200 hover:text-red-400 transition"
+                            >
+                              <X size={12} />
+                            </button>
+                          </div>
                         </div>
                       ))}
 
@@ -381,6 +494,83 @@ export default function SeatingManager({
           )}
         </div>
       </div>
+
+      {/* Venue QR Modal — single shared code, guest finds themself by name */}
+      {showVenueQr && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-8 text-center max-w-xs w-full shadow-2xl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold text-gray-800">Venue QR</h3>
+              <button
+                onClick={() => setShowVenueQr(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <p className="text-gray-500 text-sm mb-6">
+              One code for everyone — print it at the entrance. Guests scan it,
+              type their name, and see their table.
+            </p>
+            <div className="flex justify-center mb-6 p-4 bg-white rounded-xl border border-gray-100">
+              <QRCode value={venueSeatLink} size={180} />
+            </div>
+            <p className="text-xs text-gray-400 break-all mb-4">
+              {venueSeatLink}
+            </p>
+            <button
+              onClick={copyVenueLink}
+              className="w-full py-2.5 bg-gray-50 hover:bg-gray-100 text-gray-600 rounded-xl text-sm font-medium transition flex items-center justify-center gap-1.5"
+            >
+              {copiedVenue ? <CheckCircle size={14} className="text-green-500" /> : <Link2 size={14} />}
+              {copiedVenue ? 'Copied!' : 'Copy Link'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Seat QR Modal */}
+      {qrGuest && qrGuest.invite_token && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-8 text-center max-w-xs w-full shadow-2xl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold text-gray-800">{qrGuest.name}</h3>
+              <button
+                onClick={() => setQrGuest(null)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <p className="text-gray-500 text-sm mb-6">Scan to see your table</p>
+            <div className="flex justify-center mb-6 p-4 bg-white rounded-xl border border-gray-100">
+              <QRCode
+                value={getSeatLink(qrGuest.invite_token)}
+                size={180}
+              />
+            </div>
+            <p className="text-xs text-gray-400 break-all mb-4">
+              {getSeatLink(qrGuest.invite_token)}
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => copySeatLink(qrGuest)}
+                className="flex-1 py-2.5 bg-gray-50 hover:bg-gray-100 text-gray-600 rounded-xl text-sm font-medium transition flex items-center justify-center gap-1.5"
+              >
+                {copied ? <CheckCircle size={14} className="text-green-500" /> : <Link2 size={14} />}
+                {copied ? 'Copied!' : 'Copy Link'}
+              </button>
+              <button
+                onClick={() => shareSeatWhatsApp(qrGuest)}
+                className="flex-1 py-2.5 bg-green-50 hover:bg-green-100 text-green-700 rounded-xl text-sm font-medium transition flex items-center justify-center gap-2"
+              >
+                <MessageCircle size={14} />
+                WhatsApp
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
