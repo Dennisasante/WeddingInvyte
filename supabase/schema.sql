@@ -343,6 +343,28 @@ begin
 end;
 $$;
 
+-- Normalize a Ghanaian phone number to its local 0-prefixed 10-digit form,
+-- so +233544477424, +233 54 447 7424, and 0544477424 all compare equal.
+-- Strips all non-digits first, so spaces/dashes/+ and even stray Unicode
+-- directional marks (seen copy-pasted from some phones) are ignored.
+create or replace function normalize_gh_phone(p_phone text)
+returns text
+language sql
+immutable
+as $$
+  select case
+    when p_phone is null then null
+    else (
+      select case
+        when length(d) = 12 and left(d, 3) = '233' then '0' || right(d, 9)
+        when length(d) = 9 then '0' || d
+        else d
+      end
+      from (select regexp_replace(p_phone, '\D', '', 'g') as d) s
+    )
+  end;
+$$;
+
 -- Search a wedding's guests by (partial) name OR phone number — powers the
 -- single shared "venue QR" flow, where a guest finds themself by typing
 -- either one rather than scanning a personal token.
@@ -354,7 +376,7 @@ declare
   w weddings%rowtype;
   matches json;
   v_query text := trim(p_query);
-  v_digits text := regexp_replace(p_query, '\D', '', 'g');
+  v_digits text := normalize_gh_phone(p_query);
 begin
   select * into w from weddings where id = p_wedding_id;
   if not found or not w.is_active then
@@ -363,7 +385,7 @@ begin
 
   -- Require 2+ characters for a name match, or 4+ digits for a phone match
   -- (a bare 2-3 digit phone fragment would match almost every guest).
-  if length(v_query) < 2 and length(v_digits) < 4 then
+  if length(v_query) < 2 and length(coalesce(v_digits, '')) < 4 then
     return json_build_object('matches', '[]'::json);
   end if;
 
@@ -380,11 +402,10 @@ begin
         g.name,
         rt.name as table_name,
         case
-          when g.phone is not null
-            and length(regexp_replace(g.phone, '\D', '', 'g')) >= 7
+          when length(normalize_gh_phone(g.phone)) >= 7
           then
-            left(regexp_replace(g.phone, '\D', '', 'g'), 3) || ' ••• ' ||
-            right(regexp_replace(g.phone, '\D', '', 'g'), 4)
+            left(normalize_gh_phone(g.phone), 3) || ' ••• ' ||
+            right(normalize_gh_phone(g.phone), 4)
           else null
         end as phone_masked
       from guests g
@@ -395,7 +416,7 @@ begin
         and (
           (length(v_query) >= 2 and g.name ilike '%' || v_query || '%')
           or
-          (length(v_digits) >= 4 and regexp_replace(g.phone, '\D', '', 'g') like '%' || v_digits || '%')
+          (length(coalesce(v_digits, '')) >= 4 and normalize_gh_phone(g.phone) like '%' || v_digits || '%')
         )
       order by g.name
       limit 8
@@ -457,6 +478,7 @@ $$;
 grant execute on function get_invite_by_token(text) to anon, authenticated;
 grant execute on function submit_rsvp(text, text, text, text, boolean) to anon, authenticated;
 grant execute on function get_seat_by_token(text) to anon, authenticated;
+grant execute on function normalize_gh_phone(text) to anon, authenticated;
 grant execute on function search_guests_by_name(uuid, text) to anon, authenticated;
 grant execute on function get_seat_by_guest_id(uuid, uuid) to anon, authenticated;
 grant execute on function is_super_admin() to authenticated;

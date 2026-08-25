@@ -17,10 +17,19 @@ const CATEGORY_LABEL: Record<string, string> = {
   individual: 'Individual',
 }
 
+// Normalizes to the local 0-prefixed form, so +233544477424 and
+// 0544477424 compare equal regardless of how a number was entered.
+function normalizeGhPhone(raw: string): string {
+  const d = raw.replace(/\D/g, '')
+  if (d.length === 12 && d.startsWith('233')) return '0' + d.slice(3)
+  if (d.length === 9) return '0' + d
+  return d
+}
+
 export default function UsherMode({ guests }: { guests: Guest[] }) {
   const [query, setQuery] = useState('')
 
-  const digits = query.replace(/\D/g, '')
+  const digits = normalizeGhPhone(query)
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -29,7 +38,7 @@ export default function UsherMode({ guests }: { guests: Guest[] }) {
     return guests
       .filter(g => {
         const nameMatch = q.length >= 2 && g.name.toLowerCase().includes(q)
-        const phoneMatch = digits.length >= 3 && g.phone && g.phone.replace(/\D/g, '').includes(digits)
+        const phoneMatch = digits.length >= 3 && g.phone && normalizeGhPhone(g.phone).includes(digits)
         return nameMatch || phoneMatch
       })
       .slice(0, 30)
