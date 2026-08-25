@@ -343,9 +343,9 @@ begin
 end;
 $$;
 
--- Search a wedding's guests by (partial) name — powers the single shared
--- "venue QR" flow, where a guest finds themself by typing their name rather
--- than scanning a personal token.
+-- Search a wedding's guests by (partial) name OR phone number — powers the
+-- single shared "venue QR" flow, where a guest finds themself by typing
+-- either one rather than scanning a personal token.
 create or replace function search_guests_by_name(p_wedding_id uuid, p_query text)
 returns json
 language plpgsql security definer
@@ -353,13 +353,17 @@ as $$
 declare
   w weddings%rowtype;
   matches json;
+  v_query text := trim(p_query);
+  v_digits text := regexp_replace(p_query, '\D', '', 'g');
 begin
   select * into w from weddings where id = p_wedding_id;
   if not found or not w.is_active then
     return json_build_object('error', 'inactive');
   end if;
 
-  if length(trim(p_query)) < 2 then
+  -- Require 2+ characters for a name match, or 4+ digits for a phone match
+  -- (a bare 2-3 digit phone fragment would match almost every guest).
+  if length(v_query) < 2 and length(v_digits) < 4 then
     return json_build_object('matches', '[]'::json);
   end if;
 
@@ -388,7 +392,11 @@ begin
       left join reception_tables rt on rt.id = sa.table_id
       where g.wedding_id = p_wedding_id
         and g.deleted_at is null
-        and g.name ilike '%' || trim(p_query) || '%'
+        and (
+          (length(v_query) >= 2 and g.name ilike '%' || v_query || '%')
+          or
+          (length(v_digits) >= 4 and regexp_replace(g.phone, '\D', '', 'g') like '%' || v_digits || '%')
+        )
       order by g.name
       limit 8
     ) m;

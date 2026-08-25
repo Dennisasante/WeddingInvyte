@@ -128,7 +128,7 @@ export default function SeatFinder({ wedding }: { wedding: Wedding }) {
               Find Your Table
             </h1>
             <p className="text-sm text-gray-500 mb-5">
-              Enter your name to find your table.
+              Enter your name or phone number to find your table.
             </p>
             <div className="relative">
               <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" />
@@ -136,8 +136,8 @@ export default function SeatFinder({ wedding }: { wedding: Wedding }) {
                 value={query}
                 onChange={e => setQuery(e.target.value)}
                 autoFocus
-                aria-label="Search your name"
-                placeholder="Search your name"
+                aria-label="Search your name or phone number"
+                placeholder="Search your name or phone number"
                 className="w-full pl-11 pr-4 py-4 text-lg border-2 border-gray-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-amber-100 focus:border-amber-300"
               />
             </div>
@@ -150,10 +150,10 @@ export default function SeatFinder({ wedding }: { wedding: Wedding }) {
               {!searching && searched && matches.length === 0 && (
                 <div className="text-center py-4">
                   <p className="text-gray-700 font-medium text-sm mb-1">
-                    We couldn't find your name.
+                    We couldn't find a match.
                   </p>
                   <p className="text-gray-400 text-xs mb-4">
-                    Please check the spelling or ask an usher for help.
+                    Please check the spelling or number, or ask an usher for help.
                   </p>
                   <AskUsherNote prominent />
                 </div>

@@ -63,7 +63,7 @@ export default function WeddingDayPanel({ weddingId, coupleNames, totalGuests, w
         <h1 className="text-2xl font-bold text-gray-800">Wedding Day</h1>
         <p className="text-gray-500 text-sm mt-1">
           One universal QR code — print it on the entrance banner. Guests scan
-          it, search their name, and see their table.
+          it, search their name or phone number, and see their table.
         </p>
       </div>
 
