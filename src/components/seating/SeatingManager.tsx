@@ -48,20 +48,11 @@ export default function SeatingManager({
   const [editingTableId, setEditingTableId] = useState<string | null>(null)
   const [editTableName, setEditTableName] = useState('')
   const [qrGuest, setQrGuest] = useState<Guest | null>(null)
-  const [showVenueQr, setShowVenueQr] = useState(false)
   const [copied, setCopied] = useState(false)
-  const [copiedVenue, setCopiedVenue] = useState(false)
   const supabase = createClient()
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
   const getSeatLink = (token: string) => `${appUrl}/seat/${token}`
-  const venueSeatLink = `${appUrl}/seat/find/${weddingId}`
-
-  const copyVenueLink = async () => {
-    await navigator.clipboard.writeText(venueSeatLink)
-    setCopiedVenue(true)
-    setTimeout(() => setCopiedVenue(false), 2000)
-  }
 
   const getGuestCount = (table: Table) => {
     return table.seating_assignments.reduce((sum, a) => {
@@ -238,13 +229,13 @@ export default function SeatingManager({
             <Printer size={15} />
             Print Chart
           </Link>
-          <button
-            onClick={() => setShowVenueQr(true)}
+          <Link
+            href="/dashboard/wedding-day"
             className="flex items-center gap-2 text-sm px-4 py-2.5 border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 transition"
           >
             <QrCode size={15} />
             Venue QR
-          </button>
+          </Link>
           <button
             onClick={() => setShowAddTable(true)}
             className="flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-white text-sm px-4 py-2.5 rounded-xl transition"
@@ -494,40 +485,6 @@ export default function SeatingManager({
           )}
         </div>
       </div>
-
-      {/* Venue QR Modal — single shared code, guest finds themself by name */}
-      {showVenueQr && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl p-8 text-center max-w-xs w-full shadow-2xl">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-gray-800">Venue QR</h3>
-              <button
-                onClick={() => setShowVenueQr(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X size={20} />
-              </button>
-            </div>
-            <p className="text-gray-500 text-sm mb-6">
-              One code for everyone — print it at the entrance. Guests scan it,
-              type their name, and see their table.
-            </p>
-            <div className="flex justify-center mb-6 p-4 bg-white rounded-xl border border-gray-100">
-              <QRCode value={venueSeatLink} size={180} />
-            </div>
-            <p className="text-xs text-gray-400 break-all mb-4">
-              {venueSeatLink}
-            </p>
-            <button
-              onClick={copyVenueLink}
-              className="w-full py-2.5 bg-gray-50 hover:bg-gray-100 text-gray-600 rounded-xl text-sm font-medium transition flex items-center justify-center gap-1.5"
-            >
-              {copiedVenue ? <CheckCircle size={14} className="text-green-500" /> : <Link2 size={14} />}
-              {copiedVenue ? 'Copied!' : 'Copy Link'}
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Seat QR Modal */}
       {qrGuest && qrGuest.invite_token && (

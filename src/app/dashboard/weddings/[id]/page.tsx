@@ -5,7 +5,7 @@ import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import {
   Users, Heart, ArrowLeft,
-  ToggleLeft, ToggleRight, Trash2
+  ToggleLeft, ToggleRight, Trash2, Table2
 } from 'lucide-react'
 
 export default async function WeddingDetailPage({
@@ -96,6 +96,22 @@ export default async function WeddingDetailPage({
                 })
               : 'Date not set'}
           </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Link
+            href={`/dashboard/weddings/${wedding.id}/guests`}
+            className="flex items-center gap-2 text-sm px-4 py-2.5 border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 transition"
+          >
+            <Users size={15} />
+            Guest List
+          </Link>
+          <Link
+            href={`/dashboard/weddings/${wedding.id}/seating`}
+            className="flex items-center gap-2 text-sm px-4 py-2.5 border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 transition"
+          >
+            <Table2 size={15} />
+            Seating
+          </Link>
         </div>
       </div>
 

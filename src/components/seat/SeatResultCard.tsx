@@ -1,4 +1,5 @@
-import { MapPin, Calendar, Armchair } from 'lucide-react'
+import { MapPin, Calendar } from 'lucide-react'
+import AskUsherNote from './AskUsherNote'
 
 interface Props {
   guestName?: string
@@ -21,30 +22,37 @@ export default function SeatResultCard({
     return (
       <>
         <h1 className="text-lg font-bold text-gray-800 mt-4 mb-2">
-          {guestName ? `Hi ${guestName}!` : 'Not seated yet'}
+          {guestName ? `Hi ${guestName}!` : 'No table found'}
         </h1>
         <p className="text-gray-500 text-sm">
-          Your table hasn't been assigned yet — check back closer to the day,
-          or ask the couple.
+          We couldn't find an assigned table for you.
+          <br />
+          Please speak with an usher for assistance.
         </p>
+        <AskUsherNote prominent />
       </>
     )
   }
 
   return (
     <>
-      <p className="text-gray-500 text-sm mt-4">
-        {guestName}, you're seated at
-      </p>
+      <h1 className="text-xl font-bold text-gray-800 mt-4 mb-5">
+        Welcome, {guestName}!
+      </h1>
       <div
-        className="flex items-center justify-center gap-2 rounded-2xl py-6 my-4"
-        style={{ backgroundColor: `${primary}15` }}
+        className="rounded-3xl py-8 px-4 my-2"
+        style={{ backgroundColor: primary }}
       >
-        <Armchair size={22} style={{ color: primary }} />
-        <span className="text-2xl font-bold text-gray-800">
+        <p className="text-xs uppercase tracking-[0.3em] text-white/70 font-bold mb-2">
+          Your Table
+        </p>
+        <p className="text-3xl sm:text-4xl font-extrabold text-white leading-tight break-words">
           {tableName}
-        </span>
+        </p>
       </div>
+      <p className="text-gray-700 font-medium mt-5">
+        Please proceed to {tableName}.
+      </p>
 
       {(eventDate || venueName) && (
         <div className="space-y-1.5 text-xs text-gray-400 mt-6">
@@ -62,6 +70,8 @@ export default function SeatResultCard({
           )}
         </div>
       )}
+
+      <AskUsherNote />
     </>
   )
 }

@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Heart, Search, ArrowLeft } from 'lucide-react'
 import BrandFooter from '@/components/BrandFooter'
 import SeatResultCard from './SeatResultCard'
+import AskUsherNote from './AskUsherNote'
 
 interface Wedding {
   id: string
@@ -18,6 +19,8 @@ interface Wedding {
 interface Match {
   id: string
   name: string
+  table_name: string | null
+  phone_masked: string | null
 }
 
 interface SeatResult {
@@ -29,6 +32,7 @@ interface SeatResult {
 export default function SeatFinder({ wedding }: { wedding: Wedding }) {
   const [query, setQuery] = useState('')
   const [matches, setMatches] = useState<Match[]>([])
+  const [searched, setSearched] = useState(false)
   const [searching, setSearching] = useState(false)
   const [result, setResult] = useState<SeatResult | null>(null)
   const [loadingResult, setLoadingResult] = useState(false)
@@ -43,6 +47,7 @@ export default function SeatFinder({ wedding }: { wedding: Wedding }) {
 
     if (query.trim().length < 2) {
       setMatches([])
+      setSearched(false)
       setSearching(false)
       return
     }
@@ -54,8 +59,9 @@ export default function SeatFinder({ wedding }: { wedding: Wedding }) {
         p_query: query.trim(),
       })
       setMatches(data?.matches || [])
+      setSearched(true)
       setSearching(false)
-    }, 350)
+    }, 300)
 
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current)
@@ -76,7 +82,16 @@ export default function SeatFinder({ wedding }: { wedding: Wedding }) {
     setResult(null)
     setQuery('')
     setMatches([])
+    setSearched(false)
   }
+
+  // Only show a masked phone when a name collides with another match —
+  // keeps the common case (unique name) clean, per the spec's examples.
+  const nameCounts = matches.reduce<Record<string, number>>((acc, m) => {
+    const key = m.name.trim().toLowerCase()
+    acc[key] = (acc[key] || 0) + 1
+    return acc
+  }, {})
 
   return (
     <div
@@ -101,7 +116,7 @@ export default function SeatFinder({ wedding }: { wedding: Wedding }) {
             />
             <button
               onClick={reset}
-              className="flex items-center justify-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 transition mt-2 mx-auto"
+              className="flex items-center justify-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 transition mt-4 mx-auto"
             >
               <ArrowLeft size={12} />
               Search another name
@@ -109,40 +124,65 @@ export default function SeatFinder({ wedding }: { wedding: Wedding }) {
           </>
         ) : (
           <>
-            <h1 className="text-lg font-bold text-gray-800 mt-4 mb-4">
-              Find your seat
+            <h1 className="text-2xl font-bold text-gray-800 mt-4 mb-1.5">
+              Find Your Table
             </h1>
+            <p className="text-sm text-gray-500 mb-5">
+              Enter your name to find your table.
+            </p>
             <div className="relative">
-              <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-300" />
+              <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" />
               <input
                 value={query}
                 onChange={e => setQuery(e.target.value)}
                 autoFocus
-                placeholder="Type your name..."
-                className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-200"
+                aria-label="Search your name"
+                placeholder="Search your name"
+                className="w-full pl-11 pr-4 py-4 text-lg border-2 border-gray-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-amber-100 focus:border-amber-300"
               />
             </div>
 
-            <div className="mt-3 space-y-1.5 text-left">
+            <div className="mt-4 space-y-2 text-left">
               {searching && (
-                <p className="text-xs text-gray-400 text-center py-2">Searching...</p>
+                <p className="text-sm text-gray-400 text-center py-2">Searching...</p>
               )}
-              {!searching && query.trim().length >= 2 && matches.length === 0 && (
-                <p className="text-xs text-gray-400 text-center py-2">
-                  No match — check the spelling, or ask the couple.
-                </p>
+
+              {!searching && searched && matches.length === 0 && (
+                <div className="text-center py-4">
+                  <p className="text-gray-700 font-medium text-sm mb-1">
+                    We couldn't find your name.
+                  </p>
+                  <p className="text-gray-400 text-xs mb-4">
+                    Please check the spelling or ask an usher for help.
+                  </p>
+                  <AskUsherNote prominent />
+                </div>
               )}
-              {matches.map(m => (
-                <button
-                  key={m.id}
-                  onClick={() => selectGuest(m.id)}
-                  disabled={loadingResult}
-                  className="w-full text-left px-4 py-2.5 rounded-xl border border-gray-100 hover:border-amber-200 hover:bg-amber-50 transition text-sm text-gray-700 disabled:opacity-50"
-                >
-                  {m.name}
-                </button>
-              ))}
+
+              {matches.map(m => {
+                const isDuplicate = nameCounts[m.name.trim().toLowerCase()] > 1
+                return (
+                  <button
+                    key={m.id}
+                    onClick={() => selectGuest(m.id)}
+                    disabled={loadingResult}
+                    className="w-full text-left px-4 py-3 rounded-xl border-2 border-gray-100 hover:border-amber-300 hover:bg-amber-50 transition disabled:opacity-50"
+                  >
+                    <p className="font-semibold text-gray-800">{m.name}</p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <p className="text-xs text-gray-400">
+                        {m.table_name || 'No table yet'}
+                      </p>
+                      {isDuplicate && m.phone_masked && (
+                        <p className="text-xs text-gray-300">· {m.phone_masked}</p>
+                      )}
+                    </div>
+                  </button>
+                )
+              })}
             </div>
+
+            {!searched && <AskUsherNote />}
           </>
         )}
 

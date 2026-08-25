@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { Heart, User } from 'lucide-react'
+import { logActivity } from '@/lib/logActivity'
 
 export default function CreateWeddingForm() {
   const [form, setForm] = useState({
@@ -71,6 +72,14 @@ export default function CreateWeddingForm() {
 
       const result = await response.json()
       if (!response.ok) throw new Error(result.error || 'Failed to create admin')
+
+      await logActivity({
+        weddingId: wedding.id,
+        action: 'wedding_created',
+        entityType: 'wedding',
+        entityId: wedding.id,
+        details: { coupleNames: form.couple_names },
+      })
 
       router.push(`/dashboard/weddings/${wedding.id}`)
       router.refresh()

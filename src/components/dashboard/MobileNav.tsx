@@ -6,7 +6,8 @@ import { createClient } from '@/lib/supabase/client'
 import {
   Menu, X, LayoutDashboard, Users, Mail, Heart,
   ClipboardList, Table2, QrCode, Settings,
-  LogOut, Activity, MessageSquare
+  LogOut, Activity, MessageSquare,
+  MapPinned, Headphones
 } from 'lucide-react'
 
 interface Profile {
@@ -41,6 +42,8 @@ export default function MobileNav({ profile }: { profile: Profile }) {
     { href: '/dashboard/invites', label: 'Invitations', icon: Mail },
     { href: '/dashboard/messages', label: 'Guest Messages', icon: MessageSquare },
     { href: '/dashboard/checkin', label: 'Check-In', icon: QrCode },
+    { href: '/dashboard/wedding-day', label: 'Wedding Day', icon: MapPinned },
+    { href: '/dashboard/usher', label: 'Usher Mode', icon: Headphones },
     { href: '/dashboard/settings', label: 'Settings', icon: Settings },
   ]
 

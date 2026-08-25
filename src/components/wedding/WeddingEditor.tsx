@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Save, Palette, Calendar, MapPin, Image, Heart } from 'lucide-react'
+import { logActivity } from '@/lib/logActivity'
 
 interface Wedding {
   id: string
@@ -141,6 +142,12 @@ export default function WeddingEditor({ wedding }: { wedding: Wedding }) {
     } else {
       setSaved(true)
       setTimeout(() => setSaved(false), 3000)
+      logActivity({
+        weddingId: wedding.id,
+        action: 'wedding_updated',
+        entityType: 'wedding',
+        entityId: wedding.id,
+      })
     }
     setSaving(false)
   }

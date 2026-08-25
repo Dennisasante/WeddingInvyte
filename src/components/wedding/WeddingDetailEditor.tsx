@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Save, Edit2, X } from 'lucide-react'
+import { logActivity } from '@/lib/logActivity'
 
 interface Wedding {
   id: string
@@ -54,6 +55,12 @@ export default function WeddingDetailEditor({ wedding }: { wedding: Wedding }) {
       setSaved(true)
       setEditing(false)
       setTimeout(() => setSaved(false), 3000)
+      logActivity({
+        weddingId: wedding.id,
+        action: 'wedding_updated',
+        entityType: 'wedding',
+        entityId: wedding.id,
+      })
     }
     setSaving(false)
   }

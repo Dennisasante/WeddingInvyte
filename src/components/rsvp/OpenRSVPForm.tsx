@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Heart, MapPin, Calendar } from 'lucide-react'
 import BrandFooter from '@/components/BrandFooter'
+import { logActivity } from '@/lib/logActivity'
 
 interface Wedding {
   id: string
@@ -92,6 +93,14 @@ export default function OpenRSVPForm({ wedding }: { wedding: Wedding }) {
       setLoading(false)
       return
     }
+
+    logActivity({
+      weddingId: wedding.id,
+      action: 'rsvp_received',
+      entityType: 'guest',
+      entityId: guest?.id,
+      details: { guestName: name, response, source: 'open_link' },
+    })
 
     // Send confirmation email if they provided one
     if (guest?.email) {

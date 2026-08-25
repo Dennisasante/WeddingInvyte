@@ -48,7 +48,7 @@ export default function AddGuestModal({ weddingId, onClose, onGuestAdded }: Prop
     } else {
       await logActivity({
         weddingId,
-        action: 'add_guest',
+        action: 'guest_added',
         entityType: 'guest',
         entityId: data.id,
         details: { name: form.name },

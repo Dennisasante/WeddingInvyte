@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createClient as createAdminClient } from '@supabase/supabase-js'
 
 export async function logActivityServer({
   weddingId,
@@ -17,7 +18,12 @@ export async function logActivityServer({
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
-    await supabase.from('activity_log').insert({
+    const adminSupabase = createAdminClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+
+    await adminSupabase.from('activity_log').insert({
       wedding_id: weddingId || null,
       actor_id: user?.id || null,
       action,

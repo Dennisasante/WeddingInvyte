@@ -113,6 +113,8 @@ create table if not exists activity_log (
   actor_id uuid references profiles(id),
   wedding_id uuid references weddings(id),
   action text not null,
+  entity_type text,
+  entity_id text,
   details jsonb,
   created_at timestamptz not null default now()
 );
@@ -361,14 +363,33 @@ begin
     return json_build_object('matches', '[]'::json);
   end if;
 
-  select coalesce(json_agg(json_build_object('id', m.id, 'name', m.name)), '[]'::json)
+  select coalesce(json_agg(json_build_object(
+      'id', m.id,
+      'name', m.name,
+      'table_name', m.table_name,
+      'phone_masked', m.phone_masked
+    )), '[]'::json)
     into matches
     from (
-      select id, name from guests
-      where wedding_id = p_wedding_id
-        and deleted_at is null
-        and name ilike '%' || trim(p_query) || '%'
-      order by name
+      select
+        g.id,
+        g.name,
+        rt.name as table_name,
+        case
+          when g.phone is not null
+            and length(regexp_replace(g.phone, '\D', '', 'g')) >= 7
+          then
+            left(regexp_replace(g.phone, '\D', '', 'g'), 3) || ' ••• ' ||
+            right(regexp_replace(g.phone, '\D', '', 'g'), 4)
+          else null
+        end as phone_masked
+      from guests g
+      left join seating_assignments sa on sa.guest_id = g.id
+      left join reception_tables rt on rt.id = sa.table_id
+      where g.wedding_id = p_wedding_id
+        and g.deleted_at is null
+        and g.name ilike '%' || trim(p_query) || '%'
+      order by g.name
       limit 8
     ) m;
 

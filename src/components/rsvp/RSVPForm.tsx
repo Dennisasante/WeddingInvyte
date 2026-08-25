@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Heart, MapPin, Calendar } from 'lucide-react'
 import BrandFooter from '@/components/BrandFooter'
+import { logActivity } from '@/lib/logActivity'
 
 interface Guest {
   id: string
@@ -92,6 +93,14 @@ export default function RSVPForm({ guest, wedding }: Props) {
       .eq('invite_token', guest.invite_token)
 
     if (rsvpError) { setError(rsvpError.message); setLoading(false); return }
+
+    logActivity({
+      weddingId: wedding.id,
+      action: 'rsvp_received',
+      entityType: 'guest',
+      entityId: guest.id,
+      details: { guestName: guest.name, response },
+    })
 
     if (isAttending && guest.allow_plus_one && wantsPlusOne) {
       await supabase.from('plus_one_requests').upsert(

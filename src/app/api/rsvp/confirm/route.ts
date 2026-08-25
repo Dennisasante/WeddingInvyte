@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { Resend } from 'resend'
-import { logActivityServer } from '@/lib/logActivityServer'
 
 const RSVP_LABELS: Record<string, string> = {
   yes: "Yes, I'll be attending.",
@@ -12,7 +11,7 @@ const RSVP_LABELS: Record<string, string> = {
 
 export async function POST(request: NextRequest) {
   try {
-    const { guestName, response, weddingId, token } = await request.json()
+    const { response, weddingId, token } = await request.json()
 
     const supabase = await createClient()
 
@@ -124,17 +123,6 @@ export async function POST(request: NextRequest) {
   </table>
 </body>
 </html>`,
-    })
-
-    // Log RSVP activity
-    await logActivityServer({
-      weddingId,
-      action: 'rsvp_received',
-      entityType: 'guest',
-      details: {
-        guestName,
-        response,
-      },
     })
 
     return NextResponse.json({ success: true })

@@ -9,6 +9,7 @@ import {
 import AddGuestModal from './AddGuestModal'
 import CSVImportModal from './CSVImportModal'
 import EditGuestModal from './EditGuestModal'
+import { logActivity } from '@/lib/logActivity'
 
 interface Guest {
   id: string
@@ -98,12 +99,20 @@ export default function GuestManager({
 
   const handleDelete = async (guestId: string) => {
     if (!confirm('Remove this guest?')) return
+    const guest = guests.find(g => g.id === guestId)
     await supabase
       .from('guests')
       .update({ deleted_at: new Date().toISOString() })
       .eq('id', guestId)
     setGuests(prev => prev.filter(g => g.id !== guestId))
     setSelected(prev => prev.filter(id => id !== guestId))
+    await logActivity({
+      weddingId,
+      action: 'guest_deleted',
+      entityType: 'guest',
+      entityId: guestId,
+      details: { name: guest?.name },
+    })
   }
 
   const handleBulkDelete = async () => {
@@ -115,6 +124,12 @@ export default function GuestManager({
       .update({ deleted_at: new Date().toISOString() })
       .in('id', selected)
     setGuests(prev => prev.filter(g => !selected.includes(g.id)))
+    await logActivity({
+      weddingId,
+      action: 'guest_deleted',
+      entityType: 'guest',
+      details: { count: selected.length },
+    })
     setSelected([])
     setBulkDeleting(false)
   }
