@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { getRecentRsvp, escapeHtml } from '@/lib/rsvpEmailGuard'
 import { Resend } from 'resend'
 
 const RSVP_LABELS: Record<string, string> = {
@@ -11,25 +12,24 @@ const RSVP_LABELS: Record<string, string> = {
 
 export async function POST(request: NextRequest) {
   try {
-    const { response, weddingId, token } = await request.json()
+    const { token } = await request.json()
 
-    const supabase = await createClient()
+    // Everything below comes from the database for this guest's just-recorded
+    // reply, never from what the browser sends.
+    const guest = await getRecentRsvp(token)
+    if (!guest) return NextResponse.json({ skipped: 'no recent rsvp' })
 
-    // Get guest email from token
-    const { data: guest } = await supabase
-      .from('guests')
-      .select('email, name')
-      .eq('invite_token', token)
-      .single()
-
-    if (!guest?.email) {
+    if (!guest.email) {
       return NextResponse.json({ skipped: 'no email' })
     }
+
+    const response = guest.rsvp_status
+    const supabase = createAdminClient()
 
     const { data: wedding } = await supabase
       .from('weddings')
       .select('couple_names, event_date, venue_name, primary_color')
-      .eq('id', weddingId)
+      .eq('id', guest.wedding_id)
       .single()
 
     if (!wedding) return NextResponse.json({ skipped: 'no wedding' })
@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
         <tr>
           <td style="padding:40px;text-align:center;">
             <p style="color:#666;font-size:16px;margin:0 0 8px;">
-              Dear <strong>${guest.name}</strong>,
+              Dear <strong>${escapeHtml(guest.name)}</strong>,
             </p>
             <p style="color:#666;font-size:15px;line-height:1.6;margin:16px 0;">
               Your RSVP for <strong>${wedding.couple_names}</strong>'s wedding

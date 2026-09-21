@@ -1,20 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
-import { createClient as createAdminClient } from '@supabase/supabase-js'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { getRecentRsvp, escapeHtml } from '@/lib/rsvpEmailGuard'
 import { Resend } from 'resend'
 
 const RSVP_LABELS: Record<string, string> = {
   yes: "Yes, they'll be attending",
+  yes_joy: "Yes, and they'll be there with joy",
   no: "Regretfully, they can't make it",
+  from_afar: "They'll be celebrating from afar",
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const { weddingId, guestName, response, dietary, message } = await request.json()
+    const { token } = await request.json()
 
-    const supabase = await createClient()
+    // The guest, their answer and their notes come from the database for a
+    // reply recorded moments ago — not from the request — so this can't be
+    // used to send arbitrary text to a couple.
+    const guest = await getRecentRsvp(token)
+    if (!guest) return NextResponse.json({ skipped: 'no recent rsvp' })
 
-    const { data: wedding } = await supabase
+    const weddingId = guest.wedding_id
+    const response = guest.rsvp_status
+    const guestName = escapeHtml(guest.name)
+    const dietary = guest.dietary_restrictions ? escapeHtml(guest.dietary_restrictions) : null
+    const message = guest.guest_message ? escapeHtml(guest.guest_message) : null
+
+    const adminSupabase = createAdminClient()
+
+    const { data: wedding } = await adminSupabase
       .from('weddings')
       .select('couple_names, notify_on_rsvp, primary_color')
       .eq('id', weddingId)
@@ -23,11 +37,6 @@ export async function POST(request: NextRequest) {
     if (!wedding || wedding.notify_on_rsvp === false) {
       return NextResponse.json({ skipped: true })
     }
-
-    const adminSupabase = createAdminClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    )
 
     const { data: admins } = await adminSupabase
       .from('profiles')
@@ -55,7 +64,7 @@ export async function POST(request: NextRequest) {
 
     const resend = new Resend(resendKey)
     const primaryColor = wedding.primary_color || '#D4A373'
-    const isAttending = response === 'yes'
+    const isAttending = response === 'yes' || response === 'yes_joy'
 
     for (const email of recipientEmails) {
       await resend.emails.send({

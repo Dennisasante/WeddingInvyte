@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import JoinWedding from '@/components/onboarding/JoinWedding'
 
@@ -7,14 +7,19 @@ export default async function JoinPage({
 }: {
   params: { token: string }
 }) {
-  const supabase = await createClient()
+  // Logged-out visitors hold only the invite token, so it's looked up by that
+  // exact token on the server.
+  const supabase = createAdminClient()
 
-  const { data: invite } = await supabase
+  const { data: found } = await supabase
     .from('co_admin_invites')
-    .select('*, weddings(couple_names, event_date)')
+    .select('id, token, wedding_id, email, expires_at, weddings(couple_names, event_date)')
     .eq('token', params.token)
     .eq('status', 'pending')
     .single()
+
+  const invite =
+    found && (!found.expires_at || new Date(found.expires_at) > new Date()) ? found : null
 
   if (!invite) {
     return (
@@ -32,5 +37,17 @@ export default async function JoinPage({
     )
   }
 
-  return <JoinWedding invite={invite} />
+  const wedding = Array.isArray(invite.weddings) ? invite.weddings[0] : invite.weddings
+
+  return (
+    <JoinWedding
+      invite={{
+        id: invite.id,
+        token: invite.token,
+        wedding_id: invite.wedding_id,
+        email: invite.email,
+        weddings: wedding ?? null,
+      }}
+    />
+  )
 }

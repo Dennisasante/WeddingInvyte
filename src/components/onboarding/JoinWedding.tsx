@@ -29,19 +29,21 @@ export default function JoinWedding({ invite }: { invite: Invite }) {
       })
     : null
 
-  const acceptInvite = async (userId: string) => {
-    await supabase
-      .from('profiles')
-      .update({
-        wedding_id: invite.wedding_id,
-        is_primary_admin: false,
-      })
-      .eq('id', userId)
+  // The server links the account to the wedding: doing that is what grants
+  // access to its data, so the browser can't be trusted to do it.
+  const acceptInvite = async () => {
+    const res = await fetch('/api/join/accept', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: invite.token }),
+    })
 
-    await supabase
-      .from('co_admin_invites')
-      .update({ status: 'accepted' })
-      .eq('id', invite.id)
+    if (!res.ok) {
+      const data = await res.json().catch(() => null)
+      setError(data && data.error ? data.error : 'Could not join the wedding. Please try again.')
+      setLoading(false)
+      return
+    }
 
     router.push('/dashboard')
   }
@@ -69,7 +71,7 @@ export default function JoinWedding({ invite }: { invite: Invite }) {
     })
 
     if (error) { setError(error.message); setLoading(false); return }
-    if (data.user) await acceptInvite(data.user.id)
+    if (data.user) await acceptInvite()
   }
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -83,7 +85,7 @@ export default function JoinWedding({ invite }: { invite: Invite }) {
     })
 
     if (error) { setError(error.message); setLoading(false); return }
-    if (data.user) await acceptInvite(data.user.id)
+    if (data.user) await acceptInvite()
   }
 
   const inputClass = "w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-200"

@@ -1,9 +1,7 @@
 'use client'
 import { useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import { Heart, MapPin, Calendar } from 'lucide-react'
 import BrandFooter from '@/components/BrandFooter'
-import { logActivity } from '@/lib/logActivity'
 
 interface Guest {
   id: string
@@ -71,7 +69,6 @@ export default function RSVPForm({ guest, wedding, partner = null, plusOne = nul
   const [plusOneError, setPlusOneError] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const supabase = createClient()
 
   const primary = wedding.primary_color || '#D4A373'
   const secondary = wedding.secondary_color || '#FEFAE0'
@@ -95,76 +92,52 @@ export default function RSVPForm({ guest, wedding, partner = null, plusOne = nul
     setLoading(true)
     setError('')
 
-    // Couples entered as two guests answer for both partners at once.
+    // Guests are logged out, so the server records the RSVP (partner sync,
+    // plus one and activity log included) for the guest behind this token.
     const hasPartner = !!(guest.partner_id && partner)
-    const myStatus = hasPartner && isAttending && attendees === 'partner' ? 'no' : response
-    const partnerStatus = hasPartner && isAttending && attendees === 'self' ? 'no' : response
-
-    const { error: rsvpError } = await supabase
-      .from('guests')
-      .update({
-        rsvp_status: myStatus,
-        dietary_restrictions: dietary || null,
-        guest_message: message || null,
-        couple_attendance: hasPartner ? null : coupleAttendance || null,
-        invite_status: 'responded',
-        responded_at: new Date().toISOString(),
+    let result: Response
+    try {
+      result = await fetch('/api/rsvp/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          token: guest.invite_token,
+          response,
+          dietary,
+          message,
+          coupleAttendance: hasPartner ? null : coupleAttendance,
+          attendees,
+          wantsPlusOne,
+          plusOneName,
+          plusOnePhone,
+        }),
       })
-      .eq('invite_token', guest.invite_token)
-
-    if (rsvpError) { setError(rsvpError.message); setLoading(false); return }
-
-    logActivity({
-      weddingId: wedding.id,
-      action: 'rsvp_received',
-      entityType: 'guest',
-      entityId: guest.id,
-      details: { guestName: guest.name, response },
-    })
-
-    if (hasPartner) {
-      await supabase.rpc('sync_partner_rsvp', {
-        p_token: guest.invite_token,
-        p_status: partnerStatus,
-      })
+    } catch {
+      setError('Could not reach the server. Please try again.')
+      setLoading(false)
+      return
     }
 
-    // The plus one goes straight onto the guest list as their own guest — no
-    // approval step. Sending no name removes one saved earlier.
-    if (guest.allow_plus_one) {
-      await supabase.rpc('save_plus_one', {
-        p_token: guest.invite_token,
-        p_name: isAttending && wantsPlusOne ? plusOneName : '',
-        p_phone: isAttending && wantsPlusOne ? plusOnePhone : '',
-      })
+    if (!result.ok) {
+      const data = await result.json().catch(() => null)
+      setError(data?.error || 'Something went wrong. Please try again.')
+      setLoading(false)
+      return
     }
 
-    await fetch('/api/rsvp/confirm', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        guestName: guest.name,
-        response,
-        weddingId: wedding.id,
-        token: guest.invite_token,
-      }),
-    }).catch(() => null)
+    // Emails (to the guest, and to the couple) — both look the reply up by
+    // token on the server.
+    const emailBody = JSON.stringify({ token: guest.invite_token })
+    const post = (url: string) =>
+      fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: emailBody })
+        .catch(() => null)
+
+    await post('/api/rsvp/confirm')
 
     setStep('confirmed')
     setLoading(false)
 
-    // Notify the couple
-    fetch('/api/notify-couple', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        weddingId: wedding.id,
-        guestName: guest.name,
-        response,
-        dietary: dietary || null,
-        message: message || null,
-      }),
-    }).catch(() => null)
+    post('/api/notify-couple')
   }
 
   // Guests who already RSVP'd (before plus ones were entered here, or who
@@ -178,14 +151,25 @@ export default function RSVPForm({ guest, wedding, partner = null, plusOne = nul
       return
     }
     setSavingPlusOne(true)
-    const { data, error: rpcError } = await supabase.rpc('save_plus_one', {
-      p_token: guest.invite_token,
-      p_name: wantsPlusOne ? plusOneName : '',
-      p_phone: wantsPlusOne ? plusOnePhone : '',
-    })
+    let ok = false
+    try {
+      const res = await fetch('/api/rsvp/plus-one', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          token: guest.invite_token,
+          wantsPlusOne,
+          plusOneName,
+          plusOnePhone,
+        }),
+      })
+      ok = res.ok
+    } catch {
+      ok = false
+    }
     setSavingPlusOne(false)
 
-    if (rpcError || data?.error) {
+    if (!ok) {
       setPlusOneError('Something went wrong saving that. Please try again.')
       return
     }

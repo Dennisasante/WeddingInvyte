@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import type { Metadata } from 'next'
 
 export async function generateMetadata({
@@ -6,7 +6,7 @@ export async function generateMetadata({
 }: {
   params: { weddingId: string }
 }): Promise<Metadata> {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   const { data: wedding } = await supabase
     .from('weddings')

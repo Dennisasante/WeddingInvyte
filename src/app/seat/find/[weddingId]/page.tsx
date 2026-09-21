@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { notFound } from 'next/navigation'
 import SeatFinder from '@/components/seat/SeatFinder'
 
@@ -7,7 +7,7 @@ export default async function SeatFindPage({
 }: {
   params: { weddingId: string }
 }) {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   const { data: wedding } = await supabase
     .from('weddings')

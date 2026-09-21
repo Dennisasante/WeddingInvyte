@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { acceptCoAdminInvite } from '@/lib/acceptCoAdminInvite'
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
@@ -16,29 +17,8 @@ export async function GET(request: Request) {
 
       // Handle co-admin join via Google
       if (joinToken) {
-        const { data: invite } = await supabase
-          .from('co_admin_invites')
-          .select('*')
-          .eq('token', joinToken)
-          .eq('status', 'pending')
-          .single()
-
-        if (invite) {
-          await supabase
-            .from('profiles')
-            .update({
-              wedding_id: invite.wedding_id,
-              is_primary_admin: false,
-            })
-            .eq('id', data.user.id)
-
-          await supabase
-            .from('co_admin_invites')
-            .update({ status: 'accepted' })
-            .eq('id', invite.id)
-
-          return NextResponse.redirect(`${origin}/dashboard`)
-        }
+        const joined = await acceptCoAdminInvite(data.user.id, joinToken)
+        if (joined.ok) return NextResponse.redirect(`${origin}/dashboard`)
       }
 
       // Check if user needs onboarding

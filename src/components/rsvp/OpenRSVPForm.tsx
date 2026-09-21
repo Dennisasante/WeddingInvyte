@@ -1,9 +1,7 @@
 'use client'
 import { useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import { Heart, MapPin, Calendar } from 'lucide-react'
 import BrandFooter from '@/components/BrandFooter'
-import { logActivity } from '@/lib/logActivity'
 
 interface Wedding {
   id: string
@@ -37,7 +35,6 @@ export default function OpenRSVPForm({ wedding }: { wedding: Wedding }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [confirmed, setConfirmed] = useState(false)
-  const supabase = createClient()
 
   const primary = wedding.primary_color || '#D4A373'
   const secondary = wedding.secondary_color || '#FEFAE0'
@@ -70,67 +67,49 @@ export default function OpenRSVPForm({ wedding }: { wedding: Wedding }) {
     setLoading(true)
     setError('')
 
-    // Create a guest record for this open invite
-    const { data: guest, error: guestError } = await supabase
-      .from('guests')
-      .insert({
-        wedding_id: wedding.id,
-        name: name.trim(),
-        phone: phone.trim(),
-        email: email.trim() || null,
-        category: 'individual',
-        rsvp_status: response,
-        dietary_restrictions: dietary || null,
-        guest_message: message || null,
-        invite_status: 'responded',
-        responded_at: new Date().toISOString(),
+    // Anyone with the open link can add themselves, but the server does the
+    // writing (validated and de-duplicated), not the browser.
+    let result: Response
+    try {
+      result = await fetch('/api/rsvp/open', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          weddingId: wedding.id,
+          name,
+          phone,
+          email,
+          response,
+          dietary,
+          message,
+        }),
       })
-      .select()
-      .single()
-
-    if (guestError) {
-      setError(guestError.message)
+    } catch {
+      setError('Could not reach the server. Please try again.')
       setLoading(false)
       return
     }
 
-    logActivity({
-      weddingId: wedding.id,
-      action: 'rsvp_received',
-      entityType: 'guest',
-      entityId: guest?.id,
-      details: { guestName: name, response, source: 'open_link' },
-    })
-
-    // Send confirmation email if they provided one
-    if (guest?.email) {
-      await fetch('/api/rsvp/confirm', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          guestName: name,
-          response,
-          weddingId: wedding.id,
-          token: guest.invite_token,
-        }),
-      }).catch(() => null)
+    const data = await result.json().catch(() => null)
+    if (!result.ok || !data?.token) {
+      setError(data?.error || 'Something went wrong. Please try again.')
+      setLoading(false)
+      return
     }
+
+    // Emails (to the guest if they gave one, and to the couple) both look the
+    // reply up by token on the server.
+    const emailBody = JSON.stringify({ token: data.token })
+    const post = (url: string) =>
+      fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: emailBody })
+        .catch(() => null)
+
+    if (email.trim()) await post('/api/rsvp/confirm')
 
     setConfirmed(true)
     setLoading(false)
 
-    // Notify the couple
-    fetch('/api/notify-couple', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        weddingId: wedding.id,
-        guestName: name,
-        response,
-        dietary: dietary || null,
-        message: message || null,
-      }),
-    }).catch(() => null)
+    post('/api/notify-couple')
   }
 
   if (confirmed) {
