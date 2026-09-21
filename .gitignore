@@ -5,3 +5,7 @@ node_modules
 out
 *.log
 tsconfig.tsbuildinfo
+
+# Never commit key files (service-role secrets)
+supabase/Invyt keys.txt
+*keys*.txt
