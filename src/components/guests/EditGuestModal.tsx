@@ -46,6 +46,7 @@ export default function EditGuestModal({ guest, onClose, onUpdated, onPartnerAdd
   const [plusOneOf, setPlusOneOf] = useState<string | null>(guest.is_plus_one_of || null)
   const [partnerLinkId, setPartnerLinkId] = useState<string | null>(null)
   const [unlinkPartner, setUnlinkPartner] = useState(false)
+  const [showPartnerOptions, setShowPartnerOptions] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const supabase = createClient()
@@ -289,11 +290,27 @@ export default function EditGuestModal({ guest, onClose, onUpdated, onPartnerAdd
             </div>
           )}
 
-          {needsPartner && (
+          {needsPartner && !showPartnerOptions && (
+            <div className="p-3 bg-pink-50/60 rounded-xl border border-pink-100 flex items-center justify-between gap-3">
+              <p className="text-xs text-pink-700">
+                Counts as 2 guests — nothing else needed.
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowPartnerOptions(true)}
+                className="text-xs text-pink-600 hover:text-pink-800 underline flex-shrink-0"
+              >
+                Seat them separately?
+              </button>
+            </div>
+          )}
+
+          {needsPartner && showPartnerOptions && (
             <div className="p-3 bg-pink-50 rounded-xl border border-pink-100 space-y-3">
               <p className="text-xs text-pink-700">
-                This couple is saved as one entry (counted as 2). Add the partner's
-                name to make them their own guest, so each can be seated separately.
+                Optional. Add the partner as their own guest (or link one already on
+                the list) if you want to seat each of them at different tables.
+                They still count as 2 either way.
               </p>
               <div>
                 <p className="text-xs font-medium text-pink-800 mb-1.5">

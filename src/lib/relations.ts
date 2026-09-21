@@ -51,15 +51,12 @@ export function buildRelations(guests: RelGuest[]) {
     return out
   }
 
-  // A couple saved as one row: still counts as two, but the partner has no
-  // name on the list yet.
-  const isUnnamedCouple = (g: RelGuest) => g.category === 'couple' && !g.partner_id
-
+  // (A couple entered as one "Mr & Mrs ..." row has no relations to show —
+  // it's already complete and counts as two people.)
   const label = (g: RelGuest): string | null => {
     const parts = related(g).map(r => `${r.prefix} ${r.other.name}`)
-    if (isUnnamedCouple(g)) parts.push('Couple (partner not named)')
     return parts.length ? parts.join(' · ') : null
   }
 
-  return { byId, related, label, isUnnamedCouple }
+  return { byId, related, label }
 }

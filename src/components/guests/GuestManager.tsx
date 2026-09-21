@@ -10,7 +10,7 @@ import AddGuestModal from './AddGuestModal'
 import CSVImportModal from './CSVImportModal'
 import EditGuestModal from './EditGuestModal'
 import { logActivity } from '@/lib/logActivity'
-import { sumHeadcount, sumAttendingHeadcount } from '@/lib/headcount'
+import { sumHeadcount, sumAttendingHeadcount, headcount } from '@/lib/headcount'
 import { buildRelations } from '@/lib/relations'
 import { guestsMissingPlusOne } from '@/lib/plusOne'
 
@@ -69,7 +69,7 @@ export default function GuestManager({
   const [guests, setGuests] = useState(initialGuests)
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<'all' | 'pending' | 'yes' | 'no'>('all')
-  const [group, setGroup] = useState<'all' | 'couples' | 'plusones' | 'missing' | 'unnamed'>('all')
+  const [group, setGroup] = useState<'all' | 'couples' | 'plusones' | 'missing'>('all')
   const [showAddModal, setShowAddModal] = useState(false)
   const [showCSVModal, setShowCSVModal] = useState(false)
   const [editingGuest, setEditingGuest] = useState<Guest | null>(null)
@@ -80,10 +80,6 @@ export default function GuestManager({
   // Who each guest is together with (partner / plus one), for the list labels
   const relations = buildRelations(guests)
   const relationLabel = (g: Guest) => relations.label(g)
-  const relationStyle = (g: Guest) =>
-    relations.isUnnamedCouple(g) && !relations.related(g).length
-      ? 'text-amber-600'
-      : 'text-purple-600'
 
   // Groups for the second filter row
   const missingPlusOneIds = new Set(guestsMissingPlusOne(guests).map(g => g.id))
@@ -91,14 +87,12 @@ export default function GuestManager({
     which === 'all' ||
     (which === 'couples' && g.category === 'couple') ||
     (which === 'plusones' && g.category === 'plus_one') ||
-    (which === 'missing' && missingPlusOneIds.has(g.id)) ||
-    (which === 'unnamed' && relations.isUnnamedCouple(g))
+    (which === 'missing' && missingPlusOneIds.has(g.id))
   const groupOptions = [
     { key: 'all', label: 'Everyone' },
     { key: 'couples', label: 'Couples' },
     { key: 'plusones', label: 'Plus-ones' },
     { key: 'missing', label: 'Missing plus-one details' },
-    { key: 'unnamed', label: 'Partner not named' },
   ] as const
 
   const filtered = guests.filter(g => {
@@ -324,14 +318,14 @@ export default function GuestManager({
         {groupOptions.map(opt => {
           const count = opt.key === 'all' ? guests.length : guests.filter(g => inGroup(g, opt.key)).length
           // Hide the "to-do" groups once there is nothing left to do
-          if ((opt.key === 'missing' || opt.key === 'unnamed') && count === 0 && group !== opt.key) return null
+          if (opt.key === 'missing' && count === 0 && group !== opt.key) return null
           return (
             <button
               key={opt.key}
               onClick={() => setGroup(opt.key)}
               className={`px-3 py-1.5 rounded-full text-xs font-medium transition ${group === opt.key
                 ? 'bg-purple-100 text-purple-700'
-                : opt.key === 'missing' || opt.key === 'unnamed'
+                : opt.key === 'missing'
                   ? 'bg-amber-50 border border-amber-100 text-amber-700'
                   : 'bg-white border border-gray-200 text-gray-600'
                 }`}
@@ -379,7 +373,10 @@ export default function GuestManager({
                     <p className="font-medium text-gray-800 text-sm">{guest.name}</p>
                     <p className="text-xs text-gray-400">{guest.email || guest.phone || 'No contact'}</p>
                     {relationLabel(guest) && (
-                      <p className={`text-xs mt-0.5 ${relationStyle(guest)}`}>{relationLabel(guest)}</p>
+                      <p className="text-xs mt-0.5 text-purple-600">{relationLabel(guest)}</p>
+                    )}
+                    {headcount(guest) === 2 && (
+                      <p className="text-xs mt-0.5 text-gray-400">Couple · counts as 2</p>
                     )}
                   </td>
                   <td className="px-4 py-3">
@@ -487,9 +484,7 @@ export default function GuestManager({
                 {RSVP_LABELS[guest.rsvp_status]}
               </span>
               {relationLabel(guest) && (
-                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                  relationStyle(guest) === 'text-amber-600' ? 'bg-amber-50 text-amber-700' : 'bg-purple-50 text-purple-700'
-                }`}>
+                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-purple-50 text-purple-700">
                   {relationLabel(guest)}
                 </span>
               )}

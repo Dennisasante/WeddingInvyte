@@ -104,7 +104,9 @@ export default function AddGuestModal({ weddingId, onClose, onGuestAdded, allGue
     setLoading(true)
     setError('')
 
-    if (form.category === 'couple') {
+    // A couple with a second name becomes two guests (each seatable on their
+    // own). Without one, "Mr & Mrs ..." stays a single entry that counts as 2.
+    if (form.category === 'couple' && form.partner_name.trim()) {
       await addCouple()
       return
     }
@@ -158,28 +160,30 @@ export default function AddGuestModal({ weddingId, onClose, onGuestAdded, allGue
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              {form.category === 'couple' ? 'First partner' : 'Full Name'} <span className="text-red-500">*</span>
+              {form.category === 'couple' ? 'Name(s)' : 'Full Name'} <span className="text-red-500">*</span>
             </label>
             <input
               required
               value={form.name}
               onChange={e => setForm({ ...form, name: e.target.value })}
               className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-200"
-              placeholder={form.category === 'couple' ? 'Mr John Mensah' : 'Jane Doe'}
+              placeholder={form.category === 'couple' ? 'Mr & Mrs John Mensah' : 'Jane Doe'}
             />
           </div>
 
           {form.category === 'couple' && (
             <div className="p-3 bg-pink-50 rounded-xl border border-pink-100 space-y-3">
               <p className="text-xs text-pink-700">
-                A couple is added as two guests, so counts and seating are per person.
+                A couple counts as 2 guests. You can enter them together above
+                (e.g. "Mr & Mrs Mensah"), or fill in the second name below to add
+                each as their own guest so they can be seated separately.
               </p>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Second partner <span className="text-red-500">*</span>
+                  Second partner
+                  <span className="text-gray-400 font-normal ml-1">(optional)</span>
                 </label>
                 <input
-                  required
                   value={form.partner_name}
                   onChange={e => setForm({ ...form, partner_name: e.target.value })}
                   className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-200 bg-white"
