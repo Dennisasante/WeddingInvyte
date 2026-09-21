@@ -3,14 +3,16 @@ import { logActivity } from '@/lib/logActivity'
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { X } from 'lucide-react'
+import PlusOnePicker, { PickableGuest } from './PlusOnePicker'
 
 interface Props {
   weddingId: string
   onClose: () => void
   onGuestAdded: (guest: any) => void
+  allGuests?: PickableGuest[]
 }
 
-export default function AddGuestModal({ weddingId, onClose, onGuestAdded }: Props) {
+export default function AddGuestModal({ weddingId, onClose, onGuestAdded, allGuests = [] }: Props) {
   const [form, setForm] = useState({
     name: '',
     email: '',
@@ -18,15 +20,94 @@ export default function AddGuestModal({ weddingId, onClose, onGuestAdded }: Prop
     category: 'individual',
     allow_plus_one: false,
     notes: '',
+    partner_name: '',
+    partner_phone: '',
   })
+  const [plusOneOf, setPlusOneOf] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const supabase = createClient()
+
+  // A couple is two guests: each partner gets their own row (so counts and
+  // seating are per person), linked to each other through partner_id.
+  const addCouple = async () => {
+    const shared = {
+      wedding_id: weddingId,
+      category: 'couple',
+      allow_plus_one: false,
+      notes: form.notes.trim() || null,
+    }
+
+    const { data: first, error: firstError } = await supabase
+      .from('guests')
+      .insert({
+        ...shared,
+        name: form.name.trim(),
+        email: form.email.trim() || null,
+        phone: form.phone.trim() || null,
+      })
+      .select()
+      .single()
+
+    if (firstError) {
+      setError(firstError.message)
+      setLoading(false)
+      return
+    }
+
+    const { data: second, error: secondError } = await supabase
+      .from('guests')
+      .insert({
+        ...shared,
+        name: form.partner_name.trim(),
+        phone: form.partner_phone.trim() || null,
+        partner_id: first.id,
+      })
+      .select()
+      .single()
+
+    if (secondError) {
+      // Don't leave half a couple behind.
+      await supabase
+        .from('guests')
+        .update({ deleted_at: new Date().toISOString() })
+        .eq('id', first.id)
+      setError(secondError.message)
+      setLoading(false)
+      return
+    }
+
+    const { error: linkError } = await supabase
+      .from('guests')
+      .update({ partner_id: second.id })
+      .eq('id', first.id)
+
+    if (linkError) {
+      setError(linkError.message)
+      setLoading(false)
+      return
+    }
+
+    await logActivity({
+      weddingId,
+      action: 'guest_added',
+      entityType: 'guest',
+      entityId: first.id,
+      details: { name: form.name, partner: form.partner_name, couple: true },
+    })
+    onGuestAdded({ ...first, partner_id: second.id })
+    onGuestAdded({ ...second })
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError('')
+
+    if (form.category === 'couple') {
+      await addCouple()
+      return
+    }
 
     const { data, error } = await supabase
       .from('guests')
@@ -38,6 +119,7 @@ export default function AddGuestModal({ weddingId, onClose, onGuestAdded }: Prop
         category: form.category,
         allow_plus_one: form.allow_plus_one,
         notes: form.notes.trim() || null,
+        is_plus_one_of: form.category === 'plus_one' ? plusOneOf : null,
       })
       .select()
       .single()
@@ -76,16 +158,48 @@ export default function AddGuestModal({ weddingId, onClose, onGuestAdded }: Prop
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Full Name <span className="text-red-500">*</span>
+              {form.category === 'couple' ? 'First partner' : 'Full Name'} <span className="text-red-500">*</span>
             </label>
             <input
               required
               value={form.name}
               onChange={e => setForm({ ...form, name: e.target.value })}
               className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-200"
-              placeholder="Jane Doe"
+              placeholder={form.category === 'couple' ? 'Mr John Mensah' : 'Jane Doe'}
             />
           </div>
+
+          {form.category === 'couple' && (
+            <div className="p-3 bg-pink-50 rounded-xl border border-pink-100 space-y-3">
+              <p className="text-xs text-pink-700">
+                A couple is added as two guests, so counts and seating are per person.
+              </p>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Second partner <span className="text-red-500">*</span>
+                </label>
+                <input
+                  required
+                  value={form.partner_name}
+                  onChange={e => setForm({ ...form, partner_name: e.target.value })}
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-200 bg-white"
+                  placeholder="Mrs Jane Mensah"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Second partner's WhatsApp number
+                  <span className="text-gray-400 font-normal ml-1">(optional)</span>
+                </label>
+                <input
+                  value={form.partner_phone}
+                  onChange={e => setForm({ ...form, partner_phone: e.target.value })}
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-200 bg-white"
+                  placeholder="0XX XXX XXXX"
+                />
+              </div>
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
@@ -116,11 +230,22 @@ export default function AddGuestModal({ weddingId, onClose, onGuestAdded }: Prop
               className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-200 bg-white"
             >
               <option value="individual">Individual</option>
-              <option value="couple">Couple (Mr & Mrs)</option>
+              <option value="couple">Couple (Mr & Mrs) — counts as 2</option>
               <option value="plus_one">Plus One</option>
             </select>
           </div>
 
+          {form.category === 'plus_one' && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Plus one of
+                <span className="text-gray-400 font-normal ml-1">(optional)</span>
+              </label>
+              <PlusOnePicker guests={allGuests} value={plusOneOf} onChange={setPlusOneOf} />
+            </div>
+          )}
+
+          {form.category !== 'couple' && form.category !== 'plus_one' && (
           <label className="flex items-center gap-3 cursor-pointer p-3 bg-amber-50 rounded-xl border border-amber-100">
             <input
               type="checkbox"
@@ -130,9 +255,10 @@ export default function AddGuestModal({ weddingId, onClose, onGuestAdded }: Prop
             />
             <div>
               <p className="text-sm font-medium text-amber-800">Allow plus one request</p>
-              <p className="text-xs text-amber-600">Guest can request to bring someone</p>
+              <p className="text-xs text-amber-600">Guest adds their plus one's name and number when they RSVP</p>
             </div>
           </label>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>

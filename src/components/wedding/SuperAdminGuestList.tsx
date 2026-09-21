@@ -1,11 +1,13 @@
 'use client'
 import { useState, useMemo } from 'react'
 import { Search, Users } from 'lucide-react'
+import { sumHeadcount } from '@/lib/headcount'
 
 interface Guest {
   id: string
   name: string
   category: string
+  partner_id?: string | null
   phone: string | null
   rsvp_status: string
   invite_status: string
@@ -40,7 +42,7 @@ export default function SuperAdminGuestList({
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-800">Guest List</h1>
         <p className="text-gray-500 text-sm mt-1">
-          {coupleNames} · {guests.length} guest{guests.length !== 1 ? 's' : ''} · read-only
+          {coupleNames} · {sumHeadcount(guests)} guest{sumHeadcount(guests) !== 1 ? 's' : ''} · read-only
         </p>
       </div>
 

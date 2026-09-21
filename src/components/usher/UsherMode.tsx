@@ -8,6 +8,7 @@ interface Guest {
   phone: string | null
   category: string
   is_plus_one_of: string | null
+  partner_id?: string | null
   seating_assignments: { reception_tables: { name: string } | null }[]
 }
 
@@ -83,7 +84,7 @@ export default function UsherMode({ guests }: { guests: Guest[] }) {
                   <p className="font-semibold text-gray-800 truncate">{g.name}</p>
                   <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5">
                     <Users2 size={11} />
-                    {CATEGORY_LABEL[g.category] || g.category}
+                    {g.category === 'couple' && g.partner_id ? 'Couple' : CATEGORY_LABEL[g.category] || g.category}
                     {g.is_plus_one_of && ' · plus-one'}
                   </p>
                 </div>

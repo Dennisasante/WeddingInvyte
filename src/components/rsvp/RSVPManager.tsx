@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { sumHeadcount, sumAttendingHeadcount } from '@/lib/headcount'
 import {
   CheckCircle,
   XCircle,
@@ -20,6 +21,7 @@ interface Guest {
   responded_at: string | null
   category: string
   couple_attendance: string | null
+  partner_id?: string | null
 }
 
 interface PlusOneRequest {
@@ -181,7 +183,7 @@ export default function RSVPManager({
             </h1>
 
             <p className="text-gray-500 text-sm mt-1">
-              {responded.length} of {guests.length} guests have responded
+              {sumHeadcount(responded)} of {sumHeadcount(guests)} guests have responded
             </p>
           </div>
 
@@ -220,25 +222,25 @@ export default function RSVPManager({
         {[
           {
             label: 'Total',
-            value: guests.length,
+            value: sumHeadcount(guests),
             color: 'text-gray-600',
             bg: 'bg-gray-50'
           },
           {
             label: 'Attending',
-            value: attending.length,
+            value: sumAttendingHeadcount(attending),
             color: 'text-green-600',
             bg: 'bg-green-50'
           },
           {
             label: 'Not Attending',
-            value: notAttending.length,
+            value: sumHeadcount(notAttending),
             color: 'text-red-500',
             bg: 'bg-red-50'
           },
           {
             label: 'Pending',
-            value: pending.length,
+            value: sumHeadcount(pending),
             color: 'text-amber-600',
             bg: 'bg-amber-50'
           },

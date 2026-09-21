@@ -10,6 +10,7 @@ import AddGuestModal from './AddGuestModal'
 import CSVImportModal from './CSVImportModal'
 import EditGuestModal from './EditGuestModal'
 import { logActivity } from '@/lib/logActivity'
+import { sumHeadcount, sumAttendingHeadcount } from '@/lib/headcount'
 
 interface Guest {
   id: string
@@ -24,6 +25,9 @@ interface Guest {
   notes: string | null
   wedding_id: string
   created_at: string
+  partner_id?: string | null
+  is_plus_one_of?: string | null
+  couple_attendance?: string | null
 }
 
 interface Table {
@@ -69,6 +73,23 @@ export default function GuestManager({
   const [selected, setSelected] = useState<string[]>([])
   const [bulkDeleting, setBulkDeleting] = useState(false)
   const supabase = createClient()
+
+  // Who each plus one belongs to, and the reverse, for the list labels
+  const guestById = new Map(guests.map(g => [g.id, g]))
+  const plusOneNamesByHost = new Map<string, string[]>()
+  guests.forEach(g => {
+    if (g.category === 'plus_one' && g.is_plus_one_of) {
+      plusOneNamesByHost.set(g.is_plus_one_of, [...(plusOneNamesByHost.get(g.is_plus_one_of) || []), g.name])
+    }
+  })
+  const plusOneLabel = (g: Guest): string | null => {
+    if (g.category === 'plus_one' && g.is_plus_one_of) {
+      const host = guestById.get(g.is_plus_one_of)
+      return host ? `+1 of ${host.name}` : null
+    }
+    const mine = plusOneNamesByHost.get(g.id)
+    return mine ? `+1: ${mine.join(', ')}` : null
+  }
 
   const filtered = guests.filter(g => {
     const matchesSearch =
@@ -173,11 +194,12 @@ export default function GuestManager({
     URL.revokeObjectURL(url)
   }
 
+  // Counts are people, not rows: a couple counts as two.
   const stats = {
-    total: guests.length,
-    attending: guests.filter(g => g.rsvp_status === 'yes' || g.rsvp_status === 'yes_joy').length,
-    pending: guests.filter(g => g.rsvp_status === 'pending').length,
-    declined: guests.filter(g => g.rsvp_status === 'no' || g.rsvp_status === 'from_afar').length,
+    total: sumHeadcount(guests),
+    attending: sumAttendingHeadcount(guests.filter(g => g.rsvp_status === 'yes' || g.rsvp_status === 'yes_joy')),
+    pending: sumHeadcount(guests.filter(g => g.rsvp_status === 'pending')),
+    declined: sumHeadcount(guests.filter(g => g.rsvp_status === 'no' || g.rsvp_status === 'from_afar')),
   }
 
   return (
@@ -186,7 +208,7 @@ export default function GuestManager({
       <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">Guest List</h1>
-          <p className="text-gray-500 text-sm mt-0.5">{guests.length} total guests</p>
+          <p className="text-gray-500 text-sm mt-0.5">{stats.total} total guests</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
 
@@ -322,6 +344,9 @@ export default function GuestManager({
                   <td className="px-4 py-3">
                     <p className="font-medium text-gray-800 text-sm">{guest.name}</p>
                     <p className="text-xs text-gray-400">{guest.email || guest.phone || 'No contact'}</p>
+                    {plusOneLabel(guest) && (
+                      <p className="text-xs text-purple-600 mt-0.5">{plusOneLabel(guest)}</p>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${guest.category === 'couple' ? 'bg-pink-50 text-pink-700' :
@@ -427,6 +452,11 @@ export default function GuestManager({
               <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${RSVP_COLORS[guest.rsvp_status]}`}>
                 {RSVP_LABELS[guest.rsvp_status]}
               </span>
+              {plusOneLabel(guest) && (
+                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-purple-50 text-purple-700">
+                  {plusOneLabel(guest)}
+                </span>
+              )}
               {guest.allow_plus_one && (
                 <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700">
                   +1 allowed
@@ -444,6 +474,7 @@ export default function GuestManager({
             weddingId={weddingId}
             onClose={() => setShowAddModal(false)}
             onGuestAdded={handleGuestAdded}
+            allGuests={guests}
           />
         )
       }
@@ -462,6 +493,8 @@ export default function GuestManager({
             guest={editingGuest}
             onClose={() => setEditingGuest(null)}
             onUpdated={handleGuestUpdated}
+            allGuests={guests}
+            onPartnerAdded={partner => setGuests(prev => [partner as Guest, ...prev])}
           />
         )
       }

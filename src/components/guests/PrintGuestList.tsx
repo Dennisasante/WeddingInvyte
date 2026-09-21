@@ -1,5 +1,6 @@
 'use client'
 import { useEffect } from 'react'
+import { sumHeadcount, sumAttendingHeadcount } from '@/lib/headcount'
 
 interface Guest {
   id: string
@@ -7,6 +8,8 @@ interface Guest {
   email: string | null
   phone: string | null
   category: string
+  partner_id?: string | null
+  couple_attendance?: string | null
   rsvp_status: string
   dietary_restrictions: string | null
   seating_assignments: { reception_tables: { name: string } | null }[]
@@ -36,13 +39,14 @@ export default function PrintGuestList({ wedding, guests }: Props) {
     window.print()
   }, [])
 
-  const attending = guests.filter(
+  // Counts are people, not rows: a couple counts as two.
+  const attending = sumAttendingHeadcount(guests.filter(
     g => g.rsvp_status === 'yes' || g.rsvp_status === 'yes_joy'
-  ).length
-  const notAttending = guests.filter(
+  ))
+  const notAttending = sumHeadcount(guests.filter(
     g => g.rsvp_status === 'no' || g.rsvp_status === 'from_afar'
-  ).length
-  const pending = guests.filter(g => g.rsvp_status === 'pending').length
+  ))
+  const pending = sumHeadcount(guests.filter(g => g.rsvp_status === 'pending'))
 
   return (
     <div className="p-8 max-w-5xl mx-auto font-sans">
@@ -67,7 +71,7 @@ export default function PrintGuestList({ wedding, guests }: Props) {
         {/* Summary */}
         <div className="flex items-center justify-center gap-6 mt-4 text-sm">
           <span className="text-gray-600">
-            <strong>{guests.length}</strong> Total
+            <strong>{sumHeadcount(guests)}</strong> Total
           </span>
           <span className="text-green-600">
             <strong>{attending}</strong> Attending

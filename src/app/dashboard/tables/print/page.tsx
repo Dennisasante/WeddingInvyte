@@ -23,7 +23,7 @@ export default async function PrintSeatingPage() {
 
   const { data: tables } = await supabase
     .from('reception_tables')
-    .select('*, seating_assignments(*, guests(id, name, category, rsvp_status))')
+    .select('*, seating_assignments(*, guests(id, name, category, partner_id, rsvp_status))')
     .eq('wedding_id', profile.wedding_id)
     .order('name')
 

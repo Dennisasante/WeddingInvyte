@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import WeddingDayPanel from '@/components/wedding-day/WeddingDayPanel'
+import { headcount, sumHeadcount } from '@/lib/headcount'
 
 export default async function WeddingDayPage() {
   const supabase = await createClient()
@@ -21,9 +22,9 @@ export default async function WeddingDayPage() {
     .eq('id', profile.wedding_id)
     .single()
 
-  const { count: totalGuests } = await supabase
+  const { data: guests } = await supabase
     .from('guests')
-    .select('id', { count: 'exact', head: true })
+    .select('id, category, partner_id')
     .eq('wedding_id', profile.wedding_id)
     .is('deleted_at', null)
 
@@ -32,13 +33,18 @@ export default async function WeddingDayPage() {
     .select('guest_id')
     .eq('wedding_id', profile.wedding_id)
 
-  const withTable = new Set((assignments || []).map(a => a.guest_id)).size
+  // Counts are people, not rows: a couple counts as two.
+  const seatedIds = new Set((assignments || []).map(a => a.guest_id))
+  const totalGuests = sumHeadcount(guests || [])
+  const withTable = (guests || [])
+    .filter(g => seatedIds.has(g.id))
+    .reduce((sum, g) => sum + headcount(g), 0)
 
   return (
     <WeddingDayPanel
       weddingId={profile.wedding_id}
       coupleNames={wedding?.couple_names || ''}
-      totalGuests={totalGuests || 0}
+      totalGuests={totalGuests}
       withTable={withTable}
     />
   )

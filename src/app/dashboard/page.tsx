@@ -24,7 +24,7 @@ export default async function DashboardPage() {
 
     const { data: allGuests } = await supabase
       .from('guests')
-      .select('id, wedding_id, rsvp_status')
+      .select('id, wedding_id, rsvp_status, category, partner_id, couple_attendance')
       .is('deleted_at', null)
 
     return (

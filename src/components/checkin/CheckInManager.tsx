@@ -2,12 +2,15 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Search, UserCheck, Clock, Users, CheckCircle2, X } from 'lucide-react'
+import { sumHeadcount, sumAttendingHeadcount } from '@/lib/headcount'
 
 interface Guest {
   id: string
   name: string
   email: string | null
   category: string
+  partner_id?: string | null
+  couple_attendance?: string | null
   rsvp_status: string
   checked_in_at: string | null
   seating_assignments: {
@@ -28,10 +31,13 @@ export default function CheckInManager({ guests: initialGuests, weddingId }: Pro
   const [lastCheckedIn, setLastCheckedIn] = useState<Guest | null>(null)
   const supabase = createClient()
 
-  const checkedInCount = guests.filter(g => g.checked_in_at).length
-  const totalExpected = guests.filter(g =>
+  // Header progress is people (a couple checks in as two); the tab counts
+  // below stay per-row because each tab lists rows.
+  const checkedInRows = guests.filter(g => g.checked_in_at)
+  const checkedInCount = sumAttendingHeadcount(checkedInRows)
+  const totalExpected = sumAttendingHeadcount(guests.filter(g =>
     g.rsvp_status === 'yes' || g.rsvp_status === 'yes_joy'
-  ).length
+  ))
 
   const filtered = guests.filter(g => {
     const matchesSearch = g.name.toLowerCase().includes(search.toLowerCase())
@@ -155,7 +161,7 @@ export default function CheckInManager({ guests: initialGuests, weddingId }: Pro
         <div className="flex gap-2 mb-4">
           {([
             { key: 'not_checked_in', label: 'Arriving', count: guests.filter(g => !g.checked_in_at).length },
-            { key: 'checked_in', label: 'Arrived', count: checkedInCount },
+            { key: 'checked_in', label: 'Arrived', count: checkedInRows.length },
             { key: 'all', label: 'All Guests', count: guests.length },
           ] as const).map(tab => (
             <button

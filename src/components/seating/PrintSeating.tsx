@@ -1,10 +1,12 @@
 'use client'
 import { useEffect } from 'react'
+import { headcount } from '@/lib/headcount'
 
 interface Guest {
   id: string
   name: string
   category: string
+  partner_id?: string | null
   rsvp_status: string
 }
 
@@ -38,7 +40,7 @@ export default function PrintSeating({ wedding, tables }: Props) {
 
   const getGuestCount = (table: Table) =>
     table.seating_assignments.reduce((sum, a) =>
-      sum + (a.guests?.category === 'couple' ? 2 : 1), 0
+      sum + (a.guests ? headcount(a.guests) : 1), 0
     )
 
   const totalGuests = tables.reduce(
@@ -98,7 +100,7 @@ export default function PrintSeating({ wedding, tables }: Props) {
                     <span className="text-gray-700">
                       {assignment.guests?.name}
                     </span>
-                    {assignment.guests?.category === 'couple' && (
+                    {assignment.guests && headcount(assignment.guests) === 2 && (
                       <span className="text-xs text-purple-400">(+1)</span>
                     )}
                   </li>
@@ -135,7 +137,7 @@ export default function PrintSeating({ wedding, tables }: Props) {
                 {table.seating_assignments.map(a => (
                   <p key={a.id} className="text-sm text-gray-600 py-0.5">
                     {a.guests?.name}
-                    {a.guests?.category === 'couple' && ' & partner'}
+                    {a.guests && headcount(a.guests) === 2 && ' & partner'}
                   </p>
                 ))}
               </div>

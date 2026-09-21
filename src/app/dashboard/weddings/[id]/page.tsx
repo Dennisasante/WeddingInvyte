@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import WeddingDetailEditor from '@/components/wedding/WeddingDetailEditor'
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
+import { sumHeadcount, sumAttendingHeadcount } from '@/lib/headcount'
 import {
   Users, Heart, ArrowLeft,
   ToggleLeft, ToggleRight, Trash2, Table2
@@ -42,20 +43,23 @@ export default async function WeddingDetailPage({
 
   const { data: guests } = await supabase
     .from('guests')
-    .select('id, rsvp_status')
+    .select('id, rsvp_status, category, partner_id, couple_attendance')
     .eq('wedding_id', params.id)
     .is('deleted_at', null)
 
-  const attending = (guests || []).filter(g =>
+  // Counts are people, not rows: a couple counts as two.
+  const totalPeople = sumHeadcount(guests || [])
+
+  const attending = sumAttendingHeadcount((guests || []).filter(g =>
     g.rsvp_status === 'yes' || g.rsvp_status === 'yes_joy'
-  ).length
+  ))
 
-  const responded = (guests || []).filter(g =>
+  const responded = sumHeadcount((guests || []).filter(g =>
     g.rsvp_status !== 'pending'
-  ).length
+  ))
 
-  const rsvpRate = (guests || []).length > 0
-    ? Math.round((responded / (guests || []).length) * 100)
+  const rsvpRate = totalPeople > 0
+    ? Math.round((responded / totalPeople) * 100)
     : 0
 
   return (
@@ -118,7 +122,7 @@ export default async function WeddingDetailPage({
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4 mb-8">
         {[
-          { label: 'Total Guests', value: (guests || []).length, icon: Users },
+          { label: 'Total Guests', value: totalPeople, icon: Users },
           { label: 'Attending', value: attending, icon: Heart },
           { label: 'RSVP Rate', value: `${rsvpRate}%`, icon: Heart },
         ].map(({ label, value, icon: Icon }) => (

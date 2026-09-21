@@ -62,6 +62,9 @@ create table if not exists guests (
   dietary_restrictions text,
   guest_message text,
   is_plus_one_of uuid references guests(id) on delete cascade,
+  -- Couples: each partner is their own guest row; partner_id links the pair.
+  -- A 'couple' row with no partner_id is a legacy single-row couple (2 people).
+  partner_id uuid references guests(id) on delete set null,
   checked_in_at timestamptz,
   opened_at timestamptz,
   responded_at timestamptz,
@@ -71,6 +74,10 @@ create table if not exists guests (
 
 create index if not exists idx_guests_wedding on guests(wedding_id) where deleted_at is null;
 create index if not exists idx_guests_token on guests(invite_token);
+
+-- Existing databases: add the couple link column (idempotent).
+alter table guests
+  add column if not exists partner_id uuid references guests(id) on delete set null;
 
 -- ----------------------------------------------------------------
 -- PLUS-ONE REQUESTS: guest asks for a plus one; couple approves.
@@ -343,6 +350,95 @@ begin
 end;
 $$;
 
+-- Save (or remove) the plus one a guest names while RSVPing. The plus one
+-- becomes their own guest row (category 'plus_one'), so headcounts and
+-- seating count two people with no approval step. Safe to call repeatedly:
+-- resubmitting updates the same row instead of duplicating it.
+create or replace function save_plus_one(p_token text, p_name text, p_phone text)
+returns json
+language plpgsql security definer
+as $$
+declare
+  g guests%rowtype;
+  v_name text := trim(coalesce(p_name, ''));
+  v_phone text := nullif(trim(coalesce(p_phone, '')), '');
+  v_id uuid;
+begin
+  select * into g from guests where invite_token = p_token and deleted_at is null;
+  if not found then
+    return json_build_object('error', 'not_found');
+  end if;
+
+  if not g.allow_plus_one then
+    return json_build_object('error', 'not_allowed');
+  end if;
+
+  -- Only an attending guest brings a plus one; otherwise (or with no name)
+  -- drop any plus one previously saved for them.
+  if v_name = '' or g.rsvp_status not in ('yes', 'yes_joy') then
+    delete from seating_assignments
+      where guest_id in (
+        select id from guests where is_plus_one_of = g.id and deleted_at is null
+      );
+    update guests set deleted_at = now()
+      where is_plus_one_of = g.id and deleted_at is null;
+    return json_build_object('ok', true, 'removed', true);
+  end if;
+
+  select id into v_id from guests
+    where is_plus_one_of = g.id and deleted_at is null
+    limit 1;
+
+  if v_id is null then
+    insert into guests (
+      wedding_id, name, phone, category, is_plus_one_of,
+      rsvp_status, invite_status, responded_at, allow_plus_one
+    ) values (
+      g.wedding_id, v_name, v_phone, 'plus_one', g.id,
+      'yes', 'responded', now(), false
+    )
+    returning id into v_id;
+  else
+    update guests set
+      name = v_name, phone = v_phone,
+      rsvp_status = 'yes', invite_status = 'responded', responded_at = now()
+    where id = v_id;
+  end if;
+
+  return json_build_object('ok', true, 'plus_one_id', v_id);
+end;
+$$;
+
+-- When one partner of a couple RSVPs for both of them, mirror the answer
+-- onto the linked partner's row.
+create or replace function sync_partner_rsvp(p_token text, p_status text)
+returns json
+language plpgsql security definer
+as $$
+declare
+  g guests%rowtype;
+begin
+  if p_status not in ('yes', 'yes_joy', 'no', 'from_afar') then
+    return json_build_object('error', 'invalid_status');
+  end if;
+
+  select * into g from guests where invite_token = p_token and deleted_at is null;
+  if not found then
+    return json_build_object('error', 'not_found');
+  end if;
+
+  if g.partner_id is null then
+    return json_build_object('ok', true, 'skipped', true);
+  end if;
+
+  update guests set
+    rsvp_status = p_status, invite_status = 'responded', responded_at = now()
+  where id = g.partner_id and deleted_at is null;
+
+  return json_build_object('ok', true);
+end;
+$$;
+
 -- Normalize a Ghanaian phone number to its local 0-prefixed 10-digit form,
 -- so +233544477424, +233 54 447 7424, and 0544477424 all compare equal.
 -- Strips all non-digits first, so spaces/dashes/+ and even stray Unicode
@@ -478,6 +574,8 @@ $$;
 grant execute on function get_invite_by_token(text) to anon, authenticated;
 grant execute on function submit_rsvp(text, text, text, text, boolean) to anon, authenticated;
 grant execute on function get_seat_by_token(text) to anon, authenticated;
+grant execute on function save_plus_one(text, text, text) to anon, authenticated;
+grant execute on function sync_partner_rsvp(text, text) to anon, authenticated;
 grant execute on function normalize_gh_phone(text) to anon, authenticated;
 grant execute on function search_guests_by_name(uuid, text) to anon, authenticated;
 grant execute on function get_seat_by_guest_id(uuid, uuid) to anon, authenticated;

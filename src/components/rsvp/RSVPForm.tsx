@@ -12,6 +12,7 @@ interface Guest {
   allow_plus_one: boolean
   rsvp_status: string
   invite_token: string
+  partner_id?: string | null
 }
 
 interface Wedding {
@@ -38,6 +39,8 @@ interface Wedding {
 interface Props {
   guest: Guest
   wedding: Wedding
+  partner?: { id: string; name: string } | null
+  plusOne?: { name: string; phone: string | null } | null
 }
 
 const RSVP_OPTIONS = [
@@ -47,7 +50,7 @@ const RSVP_OPTIONS = [
 
 type Step = 'welcome' | 'form' | 'confirmed'
 
-export default function RSVPForm({ guest, wedding }: Props) {
+export default function RSVPForm({ guest, wedding, partner = null, plusOne = null }: Props) {
   const [step, setStep] = useState<Step>(
     guest.rsvp_status !== 'pending' ? 'confirmed' : 'welcome'
   )
@@ -57,7 +60,15 @@ export default function RSVPForm({ guest, wedding }: Props) {
   const [coupleAttendance, setCoupleAttendance] = useState('')
   const [dietary, setDietary] = useState('')
   const [message, setMessage] = useState('')
-  const [wantsPlusOne, setWantsPlusOne] = useState(false)
+  const [wantsPlusOne, setWantsPlusOne] = useState(!!plusOne)
+  const [plusOneName, setPlusOneName] = useState(plusOne?.name || '')
+  const [plusOnePhone, setPlusOnePhone] = useState(plusOne?.phone || '')
+  // For couples entered as two guests: who is coming
+  const [attendees, setAttendees] = useState<'both' | 'self' | 'partner'>('both')
+  // Adding/changing a plus one after the RSVP was already submitted
+  const [savingPlusOne, setSavingPlusOne] = useState(false)
+  const [plusOneSaved, setPlusOneSaved] = useState('')
+  const [plusOneError, setPlusOneError] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const supabase = createClient()
@@ -77,16 +88,25 @@ export default function RSVPForm({ guest, wedding }: Props) {
 
   const handleSubmit = async () => {
     if (!response) { setError('Please select a response.'); return }
+    if (isAttending && guest.allow_plus_one && wantsPlusOne && !plusOneName.trim()) {
+      setError("Please enter your plus one's name.")
+      return
+    }
     setLoading(true)
     setError('')
+
+    // Couples entered as two guests answer for both partners at once.
+    const hasPartner = !!(guest.partner_id && partner)
+    const myStatus = hasPartner && isAttending && attendees === 'partner' ? 'no' : response
+    const partnerStatus = hasPartner && isAttending && attendees === 'self' ? 'no' : response
 
     const { error: rsvpError } = await supabase
       .from('guests')
       .update({
-        rsvp_status: response,
+        rsvp_status: myStatus,
         dietary_restrictions: dietary || null,
         guest_message: message || null,
-        couple_attendance: coupleAttendance || null,
+        couple_attendance: hasPartner ? null : coupleAttendance || null,
         invite_status: 'responded',
         responded_at: new Date().toISOString(),
       })
@@ -102,11 +122,21 @@ export default function RSVPForm({ guest, wedding }: Props) {
       details: { guestName: guest.name, response },
     })
 
-    if (isAttending && guest.allow_plus_one && wantsPlusOne) {
-      await supabase.from('plus_one_requests').upsert(
-        { guest_id: guest.id, wedding_id: wedding.id, status: 'pending' },
-        { onConflict: 'guest_id' }
-      )
+    if (hasPartner) {
+      await supabase.rpc('sync_partner_rsvp', {
+        p_token: guest.invite_token,
+        p_status: partnerStatus,
+      })
+    }
+
+    // The plus one goes straight onto the guest list as their own guest — no
+    // approval step. Sending no name removes one saved earlier.
+    if (guest.allow_plus_one) {
+      await supabase.rpc('save_plus_one', {
+        p_token: guest.invite_token,
+        p_name: isAttending && wantsPlusOne ? plusOneName : '',
+        p_phone: isAttending && wantsPlusOne ? plusOnePhone : '',
+      })
     }
 
     await fetch('/api/rsvp/confirm', {
@@ -135,6 +165,31 @@ export default function RSVPForm({ guest, wedding }: Props) {
         message: message || null,
       }),
     }).catch(() => null)
+  }
+
+  // Guests who already RSVP'd (before plus ones were entered here, or who
+  // want to change theirs) can add or update their plus one from the
+  // confirmation screen. Leaving the name empty removes it.
+  const savePlusOneLater = async () => {
+    setPlusOneError('')
+    setPlusOneSaved('')
+    if (wantsPlusOne && !plusOneName.trim()) {
+      setPlusOneError("Please enter your plus one's name.")
+      return
+    }
+    setSavingPlusOne(true)
+    const { data, error: rpcError } = await supabase.rpc('save_plus_one', {
+      p_token: guest.invite_token,
+      p_name: wantsPlusOne ? plusOneName : '',
+      p_phone: wantsPlusOne ? plusOnePhone : '',
+    })
+    setSavingPlusOne(false)
+
+    if (rpcError || data?.error) {
+      setPlusOneError('Something went wrong saving that. Please try again.')
+      return
+    }
+    setPlusOneSaved(wantsPlusOne ? 'Saved — your plus one is on the guest list.' : 'Your plus one has been removed.')
   }
 
   if (step === 'confirmed') {
@@ -182,6 +237,63 @@ export default function RSVPForm({ guest, wedding }: Props) {
             >
               📍 Get Directions
             </a>
+          )}
+          {isGoing && guest.allow_plus_one && !isDeadlinePassed && (
+            <div
+              className="mt-6 p-4 rounded-xl border text-left bg-white"
+              style={{ borderColor: `${primary}30` }}
+            >
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={wantsPlusOne}
+                  onChange={e => { setWantsPlusOne(e.target.checked); setPlusOneSaved('') }}
+                  className="w-4 h-4 rounded"
+                />
+                <div>
+                  <p className="text-sm font-medium" style={{ color: primary }}>
+                    I'll be bringing a plus one
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    Add their details so they're on the guest list
+                  </p>
+                </div>
+              </label>
+
+              {wantsPlusOne && (
+                <div className="mt-4 space-y-3">
+                  <input
+                    value={plusOneName}
+                    onChange={e => { setPlusOneName(e.target.value); setPlusOneSaved('') }}
+                    placeholder="Plus one's full name"
+                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none bg-white"
+                  />
+                  <input
+                    type="tel"
+                    value={plusOnePhone}
+                    onChange={e => { setPlusOnePhone(e.target.value); setPlusOneSaved('') }}
+                    placeholder="Plus one's phone number"
+                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none bg-white"
+                  />
+                </div>
+              )}
+
+              {plusOneError && (
+                <p className="mt-3 text-xs text-red-600">{plusOneError}</p>
+              )}
+              {plusOneSaved && (
+                <p className="mt-3 text-xs text-green-600">{plusOneSaved}</p>
+              )}
+
+              <button
+                onClick={savePlusOneLater}
+                disabled={savingPlusOne}
+                className="mt-4 w-full py-3 rounded-xl text-white text-sm font-bold transition disabled:opacity-50"
+                style={{ backgroundColor: primary }}
+              >
+                {savingPlusOne ? 'Saving...' : 'Save plus one'}
+              </button>
+            </div>
           )}
           {wedding.flyer_image_url && (
             <div className="mt-6">
@@ -478,7 +590,7 @@ export default function RSVPForm({ guest, wedding }: Props) {
             </div>
           )}
 
-          {guest.category === 'couple' && (
+          {guest.category === 'couple' && !guest.partner_id && (
             <div className="mb-6">
               <p className="text-sm font-medium text-gray-700 mb-3">
                 Who will be attending?
@@ -555,13 +667,60 @@ export default function RSVPForm({ guest, wedding }: Props) {
                 />
                 <div>
                   <p className="text-sm font-medium" style={{ color: primary }}>
-                    I would like to bring a plus one
+                    I'll be bringing a plus one
                   </p>
                   <p className="text-xs text-gray-500">
-                    Subject to approval from the couple
+                    Add their details so they're on the guest list
                   </p>
                 </div>
               </label>
+
+              {wantsPlusOne && (
+                <div className="mt-4 space-y-3">
+                  <input
+                    value={plusOneName}
+                    onChange={e => setPlusOneName(e.target.value)}
+                    placeholder="Plus one's full name"
+                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none bg-white"
+                  />
+                  <input
+                    type="tel"
+                    value={plusOnePhone}
+                    onChange={e => setPlusOnePhone(e.target.value)}
+                    placeholder="Plus one's phone number"
+                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none bg-white"
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
+          {isAttending && guest.partner_id && partner && (
+            <div className="mb-6">
+              <p className="text-sm font-medium text-gray-700 mb-3">
+                Who will be attending?
+              </p>
+              <div className="grid grid-cols-1 gap-2">
+                {[
+                  { value: 'both', label: 'Both of us' },
+                  { value: 'self', label: `${guest.name} only` },
+                  { value: 'partner', label: `${partner.name} only` },
+                ].map(opt => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setAttendees(opt.value as 'both' | 'self' | 'partner')}
+                    className="py-2.5 px-3 rounded-xl text-sm font-medium border-2 transition"
+                    style={
+                      attendees === opt.value
+                        ? { borderColor: primary, backgroundColor: primary, color: 'white' }
+                        : { borderColor: '#e5e7eb', color: '#6b7280' }
+                    }
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
 

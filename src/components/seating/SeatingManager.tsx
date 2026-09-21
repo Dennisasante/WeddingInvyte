@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Plus, X, Users, Printer, Pencil, QrCode, Link2, MessageCircle, CheckCircle } from 'lucide-react'
 import Link from 'next/link'
 import QRCode from 'react-qr-code'
+import { headcount } from '@/lib/headcount'
 
 interface Guest {
   id: string
@@ -11,6 +12,7 @@ interface Guest {
   category: string
   invite_token?: string
   phone?: string | null
+  partner_id?: string | null
 }
 
 interface SeatingAssignment {
@@ -56,7 +58,7 @@ export default function SeatingManager({
 
   const getGuestCount = (table: Table) => {
     return table.seating_assignments.reduce((sum, a) => {
-      return sum + (a.guests?.category === 'couple' ? 2 : 1)
+      return sum + (a.guests ? headcount(a.guests) : 1)
     }, 0)
   }
 
@@ -88,7 +90,7 @@ export default function SeatingManager({
     if (!table) return
 
     const currentCount = getGuestCount(table)
-    const guestSeats = guest.category === 'couple' ? 2 : 1
+    const guestSeats = headcount(guest)
     if (currentCount + guestSeats > table.max_seats) return
 
     const { data } = await supabase
@@ -441,7 +443,7 @@ export default function SeatingManager({
                             <p className="text-xs font-medium text-gray-700">
                               {assignment.guests?.name}
                             </p>
-                            {assignment.guests?.category === 'couple' && (
+                            {assignment.guests && headcount(assignment.guests) === 2 && (
                               <p className="text-xs text-gray-400">
                                 couple (2 seats)
                               </p>

@@ -1,6 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { Heart, Users, CheckCircle, Plus } from 'lucide-react'
+import { sumHeadcount, sumAttendingHeadcount } from '@/lib/headcount'
 
 interface Props {
   profile: { full_name: string | null; role: string }
@@ -11,15 +12,16 @@ interface Props {
     is_active: boolean
     created_at: string
   }[]
-  guests: { id: string; wedding_id: string; rsvp_status: string }[]
+  guests: { id: string; wedding_id: string; rsvp_status: string; category: string; partner_id?: string | null; couple_attendance?: string | null }[]
 }
 
 export default function SuperAdminDashboard({ profile, weddings, guests }: Props) {
-  const totalGuests = guests.length
-  const respondedGuests = guests.filter(g => g.rsvp_status !== 'pending').length
-  const attendingGuests = guests.filter(g =>
+  // Counts are people, not rows: a couple counts as two.
+  const totalGuests = sumHeadcount(guests)
+  const respondedGuests = sumHeadcount(guests.filter(g => g.rsvp_status !== 'pending'))
+  const attendingGuests = sumAttendingHeadcount(guests.filter(g =>
     g.rsvp_status === 'yes' || g.rsvp_status === 'yes_joy'
-  ).length
+  ))
   const activeWeddings = weddings.filter(w => w.is_active).length
   const rsvpRate = totalGuests > 0
     ? Math.round((respondedGuests / totalGuests) * 100)

@@ -1,9 +1,11 @@
 import { Users } from 'lucide-react'
+import { headcount } from '@/lib/headcount'
 
 interface Guest {
   id: string
   name: string
   category: string
+  partner_id?: string | null
 }
 
 interface SeatingAssignment {
@@ -26,7 +28,7 @@ interface Props {
 
 export default function SuperAdminSeatingView({ tables, unassignedGuests, coupleNames }: Props) {
   const getGuestCount = (table: Table) =>
-    table.seating_assignments.reduce((sum, a) => sum + (a.guests?.category === 'couple' ? 2 : 1), 0)
+    table.seating_assignments.reduce((sum, a) => sum + (a.guests ? headcount(a.guests) : 1), 0)
 
   return (
     <div>
@@ -91,7 +93,7 @@ export default function SuperAdminSeatingView({ tables, unassignedGuests, couple
                       {table.seating_assignments.map(assignment => (
                         <div key={assignment.id} className="bg-gray-50 rounded-lg px-3 py-2">
                           <p className="text-xs font-medium text-gray-700">{assignment.guests?.name}</p>
-                          {assignment.guests?.category === 'couple' && (
+                          {assignment.guests && headcount(assignment.guests) === 2 && (
                             <p className="text-xs text-gray-400">couple (2 seats)</p>
                           )}
                         </div>

@@ -3,9 +3,13 @@
 import Link from 'next/link'
 import { Heart, Users, CheckCircle, Clock, ArrowRight, Calendar } from 'lucide-react'
 import { useState, useEffect } from 'react'
+import { sumHeadcount, sumAttendingHeadcount } from '@/lib/headcount'
 
 interface Guest {
   id: string
+  category: string
+  partner_id?: string | null
+  couple_attendance?: string | null
   rsvp_status: string
   invite_status: string
 }
@@ -41,11 +45,12 @@ export default function CoupleAdminDashboard({ profile, wedding, guests }: Props
     )
   }
 
-  const totalGuests = guests.length
-  const responded = guests.filter(g => g.rsvp_status !== 'pending').length
-  const attending = guests.filter(g =>
+  // Counts are people, not rows: a couple counts as two.
+  const totalGuests = sumHeadcount(guests)
+  const responded = sumHeadcount(guests.filter(g => g.rsvp_status !== 'pending'))
+  const attending = sumAttendingHeadcount(guests.filter(g =>
     g.rsvp_status === 'yes' || g.rsvp_status === 'yes_joy'
-  ).length
+  ))
 
   const pending = totalGuests - responded
 
@@ -66,22 +71,22 @@ export default function CoupleAdminDashboard({ profile, wedding, guests }: Props
   const rsvpBreakdown = [
     {
       label: 'Yes',
-      count: guests.filter(g => g.rsvp_status === 'yes').length,
+      count: sumHeadcount(guests.filter(g => g.rsvp_status === 'yes')),
       color: '#10b981'
     },
     {
       label: 'With Joy',
-      count: guests.filter(g => g.rsvp_status === 'yes_joy').length,
+      count: sumHeadcount(guests.filter(g => g.rsvp_status === 'yes_joy')),
       color: '#f59e0b'
     },
     {
       label: 'Not Attending',
-      count: guests.filter(g => g.rsvp_status === 'no').length,
+      count: sumHeadcount(guests.filter(g => g.rsvp_status === 'no')),
       color: '#ef4444'
     },
     {
       label: 'From Afar',
-      count: guests.filter(g => g.rsvp_status === 'from_afar').length,
+      count: sumHeadcount(guests.filter(g => g.rsvp_status === 'from_afar')),
       color: '#8b5cf6'
     },
   ]

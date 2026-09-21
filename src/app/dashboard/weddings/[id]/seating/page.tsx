@@ -31,7 +31,7 @@ export default async function WeddingSeatingPage({
 
   const { data: tables } = await supabase
     .from('reception_tables')
-    .select('*, seating_assignments(*, guests(id, name, category))')
+    .select('*, seating_assignments(*, guests(id, name, category, partner_id))')
     .eq('wedding_id', params.id)
     .order('name')
 
@@ -41,7 +41,7 @@ export default async function WeddingSeatingPage({
 
   let unassignedQuery = supabase
     .from('guests')
-    .select('id, name, category')
+    .select('id, name, category, partner_id')
     .eq('wedding_id', params.id)
     .is('deleted_at', null)
 
