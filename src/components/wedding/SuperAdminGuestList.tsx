@@ -2,12 +2,14 @@
 import { useState, useMemo } from 'react'
 import { Search, Users } from 'lucide-react'
 import { sumHeadcount } from '@/lib/headcount'
+import { buildRelations } from '@/lib/relations'
 
 interface Guest {
   id: string
   name: string
   category: string
   partner_id?: string | null
+  is_plus_one_of?: string | null
   phone: string | null
   rsvp_status: string
   invite_status: string
@@ -26,6 +28,7 @@ export default function SuperAdminGuestList({
   guests, coupleNames,
 }: { guests: Guest[]; coupleNames: string }) {
   const [search, setSearch] = useState('')
+  const relations = useMemo(() => buildRelations(guests), [guests])
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -71,7 +74,12 @@ export default function SuperAdminGuestList({
             <tbody className="divide-y divide-gray-50">
               {filtered.map(g => (
                 <tr key={g.id} className="hover:bg-gray-50 transition">
-                  <td className="px-5 py-3.5 font-medium text-gray-800">{g.name}</td>
+                  <td className="px-5 py-3.5">
+                    <p className="font-medium text-gray-800">{g.name}</p>
+                    {relations.label(g) && (
+                      <p className="text-xs text-purple-600 mt-0.5">{relations.label(g)}</p>
+                    )}
+                  </td>
                   <td className="px-5 py-3.5 text-gray-500 text-sm capitalize">{g.category}</td>
                   <td className="px-5 py-3.5 text-gray-500 text-sm">{g.phone || '—'}</td>
                   <td className="px-5 py-3.5">

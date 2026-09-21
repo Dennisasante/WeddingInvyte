@@ -17,7 +17,7 @@ export default async function TablesPage() {
 
   const { data: tables } = await supabase
     .from('reception_tables')
-    .select('*, seating_assignments(*, guests(id, name, category, partner_id, invite_token, phone))')
+    .select('*, seating_assignments(*, guests(id, name, category, partner_id, is_plus_one_of, invite_token, phone))')
     .eq('wedding_id', profile.wedding_id)
     .order('name')
 

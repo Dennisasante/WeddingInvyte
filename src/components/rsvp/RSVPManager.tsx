@@ -1,11 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import { sumHeadcount, sumAttendingHeadcount } from '@/lib/headcount'
+import { guestsMissingPlusOne } from '@/lib/plusOne'
+import PlusOneNudgeQueue from './PlusOneNudgeQueue'
 import {
-  CheckCircle,
-  XCircle,
   Users,
   MessageSquare,
   Mail
@@ -22,19 +21,17 @@ interface Guest {
   category: string
   couple_attendance: string | null
   partner_id?: string | null
-}
-
-interface PlusOneRequest {
-  id: string
-  status: string
-  requested_at: string
-  guests: { name: string; email: string | null } | null
+  is_plus_one_of?: string | null
+  plus_one_nudged_at?: string | null
+  phone: string | null
+  invite_token: string
+  allow_plus_one: boolean
 }
 
 interface Props {
   guests: Guest[]
-  plusOneRequests: PlusOneRequest[]
   weddingId: string
+  coupleNames: string
 }
 
 const RSVP_LABELS: Record<string, string> = {
@@ -55,16 +52,13 @@ const RSVP_COLORS: Record<string, string> = {
 
 export default function RSVPManager({
   guests,
-  plusOneRequests: initialRequests,
-  weddingId
+  weddingId,
+  coupleNames,
 }: Props) {
 
-  const [plusOneRequests, setPlusOneRequests] = useState(initialRequests)
   const [activeTab, setActiveTab] =
     useState<'responses' | 'plusone'>('responses')
 
-  const [processingId, setProcessingId] =
-    useState<string | null>(null)
 
   const [sendingReminders, setSendingReminders] =
     useState(false)
@@ -72,7 +66,6 @@ export default function RSVPManager({
   const [reminderMsg, setReminderMsg] =
     useState('')
 
-  const supabase = createClient()
 
   const responded =
     guests.filter(g => g.rsvp_status !== 'pending')
@@ -94,39 +87,8 @@ export default function RSVPManager({
   const pending =
     guests.filter(g => g.rsvp_status === 'pending')
 
-  const pendingPlusOnes =
-    plusOneRequests.filter(
-      r => r.status === 'pending'
-    )
-
-
-  const handlePlusOneDecision = async (
-    requestId: string,
-    action: 'approved' | 'declined'
-  ) => {
-
-    setProcessingId(requestId)
-
-    await supabase
-      .from('plus_one_requests')
-      .update({
-        status: action,
-        decided_at: new Date().toISOString()
-      })
-      .eq('id', requestId)
-
-
-    setPlusOneRequests(prev =>
-      prev.map(r =>
-        r.id === requestId
-          ? { ...r, status: action }
-          : r
-      )
-    )
-
-    setProcessingId(null)
-  }
-
+  // Guests coming with a plus one they haven't named and haven't been messaged yet
+  const plusOnesToNudge = guestsMissingPlusOne(guests).filter(g => !g.plus_one_nudged_at).length
 
   const sendReminders = async () => {
 
@@ -163,8 +125,8 @@ export default function RSVPManager({
     },
     {
       key: 'plusone',
-      label: 'Plus One Requests',
-      count: pendingPlusOnes.length
+      label: 'Plus ones',
+      count: plusOnesToNudge
     },
   ] as const
 
@@ -318,148 +280,10 @@ export default function RSVPManager({
 
 
 
-      {/* Plus One Requests Tab */}
-      {
-        activeTab === 'plusone' && (
-
-          <div className="space-y-3">
-
-
-            {plusOneRequests.length === 0 && (
-
-              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-12 text-center text-gray-400">
-
-                <Users
-                  size={32}
-                  className="mx-auto mb-3 opacity-30"
-                />
-
-                <p>
-                  No plus one requests yet
-                </p>
-
-              </div>
-
-            )}
-
-
-
-            {plusOneRequests.map(request => (
-
-              <div
-                key={request.id}
-                className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex items-center justify-between"
-              >
-
-                <div>
-
-                  <p className="font-medium text-gray-800">
-                    {request.guests?.name}
-                  </p>
-
-                  <p className="text-sm text-gray-400">
-                    {request.guests?.email || 'No email'}
-                  </p>
-
-
-                  <p className="text-xs text-gray-400 mt-1">
-
-                    Requested{' '}
-
-                    {new Date(
-                      request.requested_at
-                    ).toLocaleDateString(
-                      'en-US',
-                      {
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric'
-                      }
-                    )}
-
-                  </p>
-
-                </div>
-
-
-
-                <div className="flex items-center gap-3">
-
-                  {request.status === 'pending' ? (
-
-                    <>
-
-                      <button
-                        onClick={() =>
-                          handlePlusOneDecision(
-                            request.id,
-                            'declined'
-                          )
-                        }
-                        disabled={
-                          processingId === request.id
-                        }
-                        className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border border-red-200 text-red-600 hover:bg-red-50 transition disabled:opacity-50"
-                      >
-
-                        <XCircle size={15} />
-
-                        Decline
-
-                      </button>
-
-
-
-                      <button
-                        onClick={() =>
-                          handlePlusOneDecision(
-                            request.id,
-                            'approved'
-                          )
-                        }
-                        disabled={
-                          processingId === request.id
-                        }
-                        className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium bg-green-500 hover:bg-green-600 text-white transition disabled:opacity-50"
-                      >
-
-                        <CheckCircle size={15} />
-
-                        Approve
-
-                      </button>
-
-                    </>
-
-
-                  ) : (
-
-                    <span
-                      className={`px-3 py-1.5 rounded-full text-xs font-medium ${request.status === 'approved'
-                        ? 'bg-green-50 text-green-700'
-                        : 'bg-red-50 text-red-600'
-                        }`}
-                    >
-
-                      {request.status === 'approved'
-                        ? '✓ Approved'
-                        : '✗ Declined'
-                      }
-
-                    </span>
-
-                  )}
-
-                </div>
-
-              </div>
-
-            ))}
-
-          </div>
-
-        )
-      }
+      {/* Plus ones: guests coming with a plus one who haven't named them yet */}
+      {activeTab === 'plusone' && (
+        <PlusOneNudgeQueue guests={guests} coupleNames={coupleNames} />
+      )}
 
     </div >
   )

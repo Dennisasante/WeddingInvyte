@@ -22,17 +22,17 @@ export default async function RSVPPage() {
     .is('deleted_at', null)
     .order('responded_at', { ascending: false })
 
-  const { data: plusOneRequests } = await supabase
-    .from('plus_one_requests')
-    .select('*, guests(name, email)')
-    .eq('wedding_id', profile.wedding_id)
-    .order('requested_at', { ascending: false })
+  const { data: wedding } = await supabase
+    .from('weddings')
+    .select('couple_names')
+    .eq('id', profile.wedding_id)
+    .single()
 
   return (
     <RSVPManager
       guests={guests || []}
-      plusOneRequests={plusOneRequests || []}
       weddingId={profile.wedding_id}
+      coupleNames={wedding?.couple_names || 'our'}
     />
   )
 }

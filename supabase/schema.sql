@@ -79,6 +79,11 @@ create index if not exists idx_guests_token on guests(invite_token);
 alter table guests
   add column if not exists partner_id uuid references guests(id) on delete set null;
 
+-- When the couple last messaged this guest to add their plus one (used by
+-- the "Plus ones" tab in RSVP Manager so nobody is messaged twice by accident).
+alter table guests
+  add column if not exists plus_one_nudged_at timestamptz;
+
 -- ----------------------------------------------------------------
 -- PLUS-ONE REQUESTS: guest asks for a plus one; couple approves.
 -- ----------------------------------------------------------------

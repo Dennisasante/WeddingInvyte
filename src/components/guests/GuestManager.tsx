@@ -11,6 +11,8 @@ import CSVImportModal from './CSVImportModal'
 import EditGuestModal from './EditGuestModal'
 import { logActivity } from '@/lib/logActivity'
 import { sumHeadcount, sumAttendingHeadcount } from '@/lib/headcount'
+import { buildRelations } from '@/lib/relations'
+import { guestsMissingPlusOne } from '@/lib/plusOne'
 
 interface Guest {
   id: string
@@ -67,6 +69,7 @@ export default function GuestManager({
   const [guests, setGuests] = useState(initialGuests)
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<'all' | 'pending' | 'yes' | 'no'>('all')
+  const [group, setGroup] = useState<'all' | 'couples' | 'plusones' | 'missing' | 'unnamed'>('all')
   const [showAddModal, setShowAddModal] = useState(false)
   const [showCSVModal, setShowCSVModal] = useState(false)
   const [editingGuest, setEditingGuest] = useState<Guest | null>(null)
@@ -74,22 +77,29 @@ export default function GuestManager({
   const [bulkDeleting, setBulkDeleting] = useState(false)
   const supabase = createClient()
 
-  // Who each plus one belongs to, and the reverse, for the list labels
-  const guestById = new Map(guests.map(g => [g.id, g]))
-  const plusOneNamesByHost = new Map<string, string[]>()
-  guests.forEach(g => {
-    if (g.category === 'plus_one' && g.is_plus_one_of) {
-      plusOneNamesByHost.set(g.is_plus_one_of, [...(plusOneNamesByHost.get(g.is_plus_one_of) || []), g.name])
-    }
-  })
-  const plusOneLabel = (g: Guest): string | null => {
-    if (g.category === 'plus_one' && g.is_plus_one_of) {
-      const host = guestById.get(g.is_plus_one_of)
-      return host ? `+1 of ${host.name}` : null
-    }
-    const mine = plusOneNamesByHost.get(g.id)
-    return mine ? `+1: ${mine.join(', ')}` : null
-  }
+  // Who each guest is together with (partner / plus one), for the list labels
+  const relations = buildRelations(guests)
+  const relationLabel = (g: Guest) => relations.label(g)
+  const relationStyle = (g: Guest) =>
+    relations.isUnnamedCouple(g) && !relations.related(g).length
+      ? 'text-amber-600'
+      : 'text-purple-600'
+
+  // Groups for the second filter row
+  const missingPlusOneIds = new Set(guestsMissingPlusOne(guests).map(g => g.id))
+  const inGroup = (g: Guest, which: typeof group) =>
+    which === 'all' ||
+    (which === 'couples' && g.category === 'couple') ||
+    (which === 'plusones' && g.category === 'plus_one') ||
+    (which === 'missing' && missingPlusOneIds.has(g.id)) ||
+    (which === 'unnamed' && relations.isUnnamedCouple(g))
+  const groupOptions = [
+    { key: 'all', label: 'Everyone' },
+    { key: 'couples', label: 'Couples' },
+    { key: 'plusones', label: 'Plus-ones' },
+    { key: 'missing', label: 'Missing plus-one details' },
+    { key: 'unnamed', label: 'Partner not named' },
+  ] as const
 
   const filtered = guests.filter(g => {
     const matchesSearch =
@@ -101,7 +111,7 @@ export default function GuestManager({
       (filter === 'pending' && g.rsvp_status === 'pending') ||
       (filter === 'yes' && (g.rsvp_status === 'yes' || g.rsvp_status === 'yes_joy')) ||
       (filter === 'no' && (g.rsvp_status === 'no' || g.rsvp_status === 'from_afar'))
-    return matchesSearch && matchesFilter
+    return matchesSearch && matchesFilter && inGroup(g, group)
   })
 
   const toggleSelect = (id: string) => {
@@ -309,6 +319,30 @@ export default function GuestManager({
         </div>
       </div>
 
+      {/* Who-is-with-who filters */}
+      <div className="flex flex-wrap items-center gap-1.5 mb-4">
+        {groupOptions.map(opt => {
+          const count = opt.key === 'all' ? guests.length : guests.filter(g => inGroup(g, opt.key)).length
+          // Hide the "to-do" groups once there is nothing left to do
+          if ((opt.key === 'missing' || opt.key === 'unnamed') && count === 0 && group !== opt.key) return null
+          return (
+            <button
+              key={opt.key}
+              onClick={() => setGroup(opt.key)}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium transition ${group === opt.key
+                ? 'bg-purple-100 text-purple-700'
+                : opt.key === 'missing' || opt.key === 'unnamed'
+                  ? 'bg-amber-50 border border-amber-100 text-amber-700'
+                  : 'bg-white border border-gray-200 text-gray-600'
+                }`}
+            >
+              {opt.label}
+              <span className="ml-1.5 opacity-60">{count}</span>
+            </button>
+          )
+        })}
+      </div>
+
       {/* Desktop Table */}
       <div className="hidden md:block bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
@@ -344,8 +378,8 @@ export default function GuestManager({
                   <td className="px-4 py-3">
                     <p className="font-medium text-gray-800 text-sm">{guest.name}</p>
                     <p className="text-xs text-gray-400">{guest.email || guest.phone || 'No contact'}</p>
-                    {plusOneLabel(guest) && (
-                      <p className="text-xs text-purple-600 mt-0.5">{plusOneLabel(guest)}</p>
+                    {relationLabel(guest) && (
+                      <p className={`text-xs mt-0.5 ${relationStyle(guest)}`}>{relationLabel(guest)}</p>
                     )}
                   </td>
                   <td className="px-4 py-3">
@@ -452,9 +486,11 @@ export default function GuestManager({
               <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${RSVP_COLORS[guest.rsvp_status]}`}>
                 {RSVP_LABELS[guest.rsvp_status]}
               </span>
-              {plusOneLabel(guest) && (
-                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-purple-50 text-purple-700">
-                  {plusOneLabel(guest)}
+              {relationLabel(guest) && (
+                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                  relationStyle(guest) === 'text-amber-600' ? 'bg-amber-50 text-amber-700' : 'bg-purple-50 text-purple-700'
+                }`}>
+                  {relationLabel(guest)}
                 </span>
               )}
               {guest.allow_plus_one && (
@@ -495,6 +531,7 @@ export default function GuestManager({
             onUpdated={handleGuestUpdated}
             allGuests={guests}
             onPartnerAdded={partner => setGuests(prev => [partner as Guest, ...prev])}
+            onGuestChanged={other => setGuests(prev => prev.map(g => g.id === other.id ? { ...g, ...(other as Guest) } : g))}
           />
         )
       }

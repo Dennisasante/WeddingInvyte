@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { X } from 'lucide-react'
 import PlusOnePicker, { PickableGuest } from './PlusOnePicker'
+import GuestPicker from './GuestPicker'
 
 interface Guest {
   id: string
@@ -26,10 +27,12 @@ interface Props {
   onClose: () => void
   onUpdated: (guest: Guest) => void
   onPartnerAdded?: (guest: Guest) => void
+  // Another guest changed as a side effect (e.g. their partner was linked or unlinked)
+  onGuestChanged?: (guest: Guest) => void
   allGuests?: PickableGuest[]
 }
 
-export default function EditGuestModal({ guest, onClose, onUpdated, onPartnerAdded, allGuests = [] }: Props) {
+export default function EditGuestModal({ guest, onClose, onUpdated, onPartnerAdded, onGuestChanged, allGuests = [] }: Props) {
   const [form, setForm] = useState({
     name: guest.name,
     email: guest.email || '',
@@ -41,6 +44,8 @@ export default function EditGuestModal({ guest, onClose, onUpdated, onPartnerAdd
     partner_phone: '',
   })
   const [plusOneOf, setPlusOneOf] = useState<string | null>(guest.is_plus_one_of || null)
+  const [partnerLinkId, setPartnerLinkId] = useState<string | null>(null)
+  const [unlinkPartner, setUnlinkPartner] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const supabase = createClient()
@@ -48,6 +53,13 @@ export default function EditGuestModal({ guest, onClose, onUpdated, onPartnerAdd
   // A 'couple' saved as a single row still counts as two people; naming the
   // partner turns it into two guests so seating and counts are per person.
   const needsPartner = form.category === 'couple' && !guest.partner_id
+
+  // The linked partner, if any, and who could be linked as one: individuals
+  // not already paired up (a one-row couple would count wrongly if merged).
+  const currentPartner = guest.partner_id ? allGuests.find(g => g.id === guest.partner_id) : undefined
+  const partnerCandidates = allGuests.filter(g =>
+    g.id !== guest.id && g.category === 'individual' && !g.partner_id
+  )
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -72,6 +84,62 @@ export default function EditGuestModal({ guest, onClose, onUpdated, onPartnerAdd
     if (error) {
       setError(error.message)
       setLoading(false)
+      return
+    }
+
+    // Unlinking makes both people individuals again (otherwise each would be
+    // counted as a whole couple).
+    if (unlinkPartner && guest.partner_id) {
+      const { data: rows, error: unlinkError } = await supabase
+        .from('guests')
+        .update({ partner_id: null, category: 'individual' })
+        .in('id', [guest.id, guest.partner_id])
+        .select()
+
+      if (unlinkError) {
+        setError(unlinkError.message)
+        setLoading(false)
+        return
+      }
+      const mine = rows?.find(r => r.id === guest.id)
+      const other = rows?.find(r => r.id === guest.partner_id)
+      if (other) onGuestChanged?.(other)
+      onUpdated(mine || data)
+      return
+    }
+
+    // Link an existing guest as this guest's partner (both ways).
+    if (needsPartner && partnerLinkId) {
+      const { data: other, error: otherError } = await supabase
+        .from('guests')
+        .update({ partner_id: guest.id, category: 'couple' })
+        .eq('id', partnerLinkId)
+        .select()
+        .single()
+
+      if (otherError) {
+        setError(otherError.message)
+        setLoading(false)
+        return
+      }
+
+      const { data: mine, error: mineError } = await supabase
+        .from('guests')
+        .update({ partner_id: partnerLinkId, category: 'couple' })
+        .eq('id', guest.id)
+        .select()
+        .single()
+
+      if (mineError) {
+        // Don't leave the link half made.
+        await supabase.from('guests').update({ partner_id: null, category: 'individual' }).eq('id', partnerLinkId)
+        setError(mineError.message)
+        setLoading(false)
+        return
+      }
+
+      onGuestChanged?.(other)
+      onUpdated(mine)
       return
     }
 
@@ -199,12 +267,51 @@ export default function EditGuestModal({ guest, onClose, onUpdated, onPartnerAdd
             </div>
           )}
 
+          {currentPartner && (
+            <div className="p-3 bg-pink-50 rounded-xl border border-pink-100">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-sm text-pink-800">
+                  Couple with <strong>{currentPartner.name}</strong>
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setUnlinkPartner(v => !v)}
+                  className="text-xs text-pink-600 hover:text-pink-800 underline flex-shrink-0"
+                >
+                  {unlinkPartner ? 'Keep them together' : 'Unlink'}
+                </button>
+              </div>
+              {unlinkPartner && (
+                <p className="text-xs text-pink-600 mt-1.5">
+                  On save, both become separate individual guests.
+                </p>
+              )}
+            </div>
+          )}
+
           {needsPartner && (
             <div className="p-3 bg-pink-50 rounded-xl border border-pink-100 space-y-3">
               <p className="text-xs text-pink-700">
                 This couple is saved as one entry (counted as 2). Add the partner's
                 name to make them their own guest, so each can be seated separately.
               </p>
+              <div>
+                <p className="text-xs font-medium text-pink-800 mb-1.5">
+                  Already on the list as their own guest?
+                </p>
+                <GuestPicker
+                  candidates={partnerCandidates}
+                  allGuests={allGuests}
+                  value={partnerLinkId}
+                  onChange={setPartnerLinkId}
+                  placeholder="Search for their partner..."
+                  selectedPrefix="Couple with"
+                  emptyHint="No match (only individual guests can be linked)"
+                />
+              </div>
+              {!partnerLinkId && (
+              <>
+              <p className="text-xs text-pink-700">Or add them as a new guest:</p>
               <input
                 value={form.partner_name}
                 onChange={e => setForm({ ...form, partner_name: e.target.value })}
@@ -217,6 +324,8 @@ export default function EditGuestModal({ guest, onClose, onUpdated, onPartnerAdd
                 className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-200 bg-white"
                 placeholder="Partner's WhatsApp number (optional)"
               />
+              </>
+              )}
             </div>
           )}
 

@@ -5,6 +5,7 @@ import { Plus, X, Users, Printer, Pencil, QrCode, Link2, MessageCircle, CheckCir
 import Link from 'next/link'
 import QRCode from 'react-qr-code'
 import { headcount } from '@/lib/headcount'
+import { buildRelations } from '@/lib/relations'
 
 interface Guest {
   id: string
@@ -13,6 +14,7 @@ interface Guest {
   invite_token?: string
   phone?: string | null
   partner_id?: string | null
+  is_plus_one_of?: string | null
 }
 
 interface SeatingAssignment {
@@ -55,6 +57,36 @@ export default function SeatingManager({
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
   const getSeatLink = (token: string) => `${appUrl}/seat/${token}`
+
+  // Who is together with whom, and where each of them is currently seated,
+  // so a couple / plus one can be kept at the same table.
+  const relations = buildRelations([
+    ...tables.flatMap(t => t.seating_assignments.map(a => a.guests).filter(Boolean)),
+    ...unassigned,
+  ])
+  const seatOf = new Map<string, string>()
+  tables.forEach(t => t.seating_assignments.forEach(a => seatOf.set(a.guest_id, t.id)))
+
+  // Lines under a guest's name: "Couple with Jane", coloured amber when that
+  // person is NOT at this table (or not seated yet), purple when they are.
+  const renderRelations = (guest: Guest, currentTableId: string | null) =>
+    relations.related(guest).map(r => {
+      const otherTableId = seatOf.get(r.other.id)
+      const together = currentTableId !== null && otherTableId === currentTableId
+      const where = together
+        ? ''
+        : otherTableId
+          ? ` — at ${tables.find(t => t.id === otherTableId)?.name ?? 'another table'}`
+          : ' — not seated yet'
+      return (
+        <p
+          key={r.kind + r.other.id}
+          className={`text-xs mt-0.5 ${together ? 'text-purple-500' : 'text-amber-600'}`}
+        >
+          {r.prefix} {r.other.name}{where}
+        </p>
+      )
+    })
 
   const getGuestCount = (table: Table) => {
     return table.seating_assignments.reduce((sum, a) => {
@@ -326,6 +358,7 @@ export default function SeatingManager({
                   <p className="text-xs text-gray-400 mt-0.5">
                     {guest.category}
                   </p>
+                  {renderRelations(guest, null)}
                 </div>
               ))}
               {unassigned.length === 0 && (
@@ -443,6 +476,7 @@ export default function SeatingManager({
                             <p className="text-xs font-medium text-gray-700">
                               {assignment.guests?.name}
                             </p>
+                            {assignment.guests && renderRelations(assignment.guests, table.id)}
                             {assignment.guests && headcount(assignment.guests) === 2 && (
                               <p className="text-xs text-gray-400">
                                 couple (2 seats)

@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Search, UserCheck, Clock, Users, CheckCircle2, X } from 'lucide-react'
 import { sumHeadcount, sumAttendingHeadcount } from '@/lib/headcount'
+import { buildRelations } from '@/lib/relations'
 
 interface Guest {
   id: string
@@ -11,6 +12,7 @@ interface Guest {
   category: string
   partner_id?: string | null
   couple_attendance?: string | null
+  is_plus_one_of?: string | null
   rsvp_status: string
   checked_in_at: string | null
   seating_assignments: {
@@ -28,11 +30,12 @@ export default function CheckInManager({ guests: initialGuests, weddingId }: Pro
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<'all' | 'checked_in' | 'not_checked_in'>('not_checked_in')
   const [checkingIn, setCheckingIn] = useState<string | null>(null)
-  const [lastCheckedIn, setLastCheckedIn] = useState<Guest | null>(null)
+  const [lastCheckedIn, setLastCheckedIn] = useState<{ names: string } | null>(null)
   const supabase = createClient()
 
   // Header progress is people (a couple checks in as two); the tab counts
   // below stay per-row because each tab lists rows.
+  const relations = buildRelations(guests)
   const checkedInRows = guests.filter(g => g.checked_in_at)
   const checkedInCount = sumAttendingHeadcount(checkedInRows)
   const totalExpected = sumAttendingHeadcount(guests.filter(g =>
@@ -52,6 +55,53 @@ export default function CheckInManager({ guests: initialGuests, weddingId }: Pro
     return guest.seating_assignments?.[0]?.reception_tables?.name || null
   }
 
+  // Everyone who arrives together: a guest, their partner, and any plus ones
+  // (found by following the couple / plus-one links). Only people still to
+  // arrive, and not declined, are included.
+  const arrivingTogether = (guest: Guest): Guest[] => {
+    const seen = new Set<string>([guest.id])
+    const queue: Guest[] = [guest]
+    while (queue.length) {
+      const current = queue.shift()!
+      relations.related(current).forEach(r => {
+        if (!seen.has(r.other.id)) {
+          seen.add(r.other.id)
+          const full = guests.find(x => x.id === r.other.id)
+          if (full) queue.push(full)
+        }
+      })
+    }
+    return guests.filter(g =>
+      seen.has(g.id) &&
+      !g.checked_in_at &&
+      g.rsvp_status !== 'no' &&
+      g.rsvp_status !== 'from_afar'
+    )
+  }
+
+  const handleCheckInGroup = async (members: Guest[]) => {
+    if (members.length === 0) return
+    setCheckingIn(members[0].id)
+
+    const checkedInAt = new Date().toISOString()
+    const ids = members.map(m => m.id)
+
+    const { error } = await supabase
+      .from('guests')
+      .update({ checked_in_at: checkedInAt })
+      .in('id', ids)
+
+    if (!error) {
+      setGuests(prev => prev.map(g =>
+        ids.includes(g.id) ? { ...g, checked_in_at: checkedInAt } : g
+      ))
+      setLastCheckedIn({ names: members.map(m => m.name).join(' & ') })
+      setTimeout(() => setLastCheckedIn(null), 4000)
+    }
+
+    setCheckingIn(null)
+  }
+
   const handleCheckIn = async (guest: Guest) => {
     if (guest.checked_in_at) return
     setCheckingIn(guest.id)
@@ -67,7 +117,7 @@ export default function CheckInManager({ guests: initialGuests, weddingId }: Pro
       setGuests(prev => prev.map(g =>
         g.id === guest.id ? { ...g, checked_in_at: checkedInAt } : g
       ))
-      setLastCheckedIn({ ...guest, checked_in_at: checkedInAt })
+      setLastCheckedIn({ names: guest.name })
       setTimeout(() => setLastCheckedIn(null), 4000)
     }
 
@@ -150,7 +200,7 @@ export default function CheckInManager({ guests: initialGuests, weddingId }: Pro
         <div className="fixed top-4 right-4 z-50 bg-green-500 text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 animate-pulse">
           <CheckCircle2 size={20} />
           <div>
-            <p className="font-bold">{lastCheckedIn.name}</p>
+            <p className="font-bold">{lastCheckedIn.names}</p>
             <p className="text-xs text-green-100">Checked in successfully!</p>
           </div>
         </div>
@@ -189,6 +239,7 @@ export default function CheckInManager({ guests: initialGuests, weddingId }: Pro
             const isCheckedIn = !!guest.checked_in_at
             const tableName = getTableName(guest)
             const isProcessing = checkingIn === guest.id
+            const together = isCheckedIn ? [] : arrivingTogether(guest)
 
             return (
               <div
@@ -213,6 +264,12 @@ export default function CheckInManager({ guests: initialGuests, weddingId }: Pro
                         </span>
                       )}
                     </div>
+                    {relations.related(guest).map(r => (
+                      <p key={r.kind + r.other.id} className="text-xs text-purple-300 mb-1 truncate">
+                        {r.prefix} {r.other.name}
+                        {r.other.id && guests.find(x => x.id === r.other.id)?.checked_in_at ? ' ✓ arrived' : ''}
+                      </p>
+                    ))}
                     <div className="flex items-center gap-3 text-xs">
                       {tableName && (
                         <span className="text-gray-400 flex items-center gap-1">
@@ -241,7 +298,7 @@ export default function CheckInManager({ guests: initialGuests, weddingId }: Pro
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 ml-4">
+                  <div className="flex flex-wrap items-center justify-end gap-2 ml-4">
                     {isCheckedIn ? (
                       <>
                         <CheckCircle2 size={24} className="text-green-400" />
@@ -266,6 +323,16 @@ export default function CheckInManager({ guests: initialGuests, weddingId }: Pro
                             Check In
                           </>
                         )}
+                      </button>
+                    )}
+                    {together.length > 1 && (
+                      <button
+                        onClick={() => handleCheckInGroup(together)}
+                        disabled={isProcessing}
+                        className="bg-purple-600 hover:bg-purple-500 active:scale-95 text-white px-4 py-2.5 rounded-xl text-sm font-bold transition disabled:opacity-50 flex items-center gap-2"
+                      >
+                        <Users size={16} />
+                        All {together.length}
                       </button>
                     )}
                   </div>

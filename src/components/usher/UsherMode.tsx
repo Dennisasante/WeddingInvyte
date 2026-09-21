@@ -1,6 +1,7 @@
 'use client'
 import { useState, useMemo } from 'react'
 import { Search, Headphones, Users2 } from 'lucide-react'
+import { buildRelations } from '@/lib/relations'
 
 interface Guest {
   id: string
@@ -31,6 +32,7 @@ export default function UsherMode({ guests }: { guests: Guest[] }) {
   const [query, setQuery] = useState('')
 
   const digits = normalizeGhPhone(query)
+  const relations = buildRelations(guests)
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -87,6 +89,14 @@ export default function UsherMode({ guests }: { guests: Guest[] }) {
                     {g.category === 'couple' && g.partner_id ? 'Couple' : CATEGORY_LABEL[g.category] || g.category}
                     {g.is_plus_one_of && ' · plus-one'}
                   </p>
+                  {relations.related(g).map(r => {
+                    const otherTable = guests.find(x => x.id === r.other.id)?.seating_assignments?.[0]?.reception_tables?.name
+                    return (
+                      <p key={r.kind + r.other.id} className="text-xs text-purple-600 mt-0.5 truncate">
+                        {r.prefix} {r.other.name}{otherTable ? ` · ${otherTable}` : ''}
+                      </p>
+                    )
+                  })}
                 </div>
                 <div
                   className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-sm font-bold ${
