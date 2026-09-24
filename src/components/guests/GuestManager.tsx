@@ -13,6 +13,7 @@ import { logActivity } from '@/lib/logActivity'
 import { sumHeadcount, sumAttendingHeadcount, headcount } from '@/lib/headcount'
 import { buildRelations } from '@/lib/relations'
 import { guestsMissingPlusOne } from '@/lib/plusOne'
+import RsvpStatusControl from './RsvpStatusControl'
 
 interface Guest {
   id: string
@@ -42,14 +43,6 @@ interface Props {
   weddingId: string
   tables: Table[]
   isSuperAdmin: boolean
-}
-
-const RSVP_COLORS: Record<string, string> = {
-  pending: 'bg-gray-100 text-gray-600',
-  yes: 'bg-green-50 text-green-700',
-  yes_joy: 'bg-emerald-50 text-emerald-700',
-  no: 'bg-red-50 text-red-600',
-  from_afar: 'bg-purple-50 text-purple-700',
 }
 
 const RSVP_LABELS: Record<string, string> = {
@@ -157,6 +150,18 @@ export default function GuestManager({
     })
     setSelected([])
     setBulkDeleting(false)
+  }
+
+  const handleRsvpChanged = (
+    guestId: string,
+    patch: { rsvp_status: string },
+    removedGuestIds: string[]
+  ) => {
+    setGuests(prev =>
+      prev
+        .filter(g => !removedGuestIds.includes(g.id))
+        .map(g => g.id === guestId ? { ...g, ...patch } : g)
+    )
   }
 
   const handleGuestAdded = (newGuest: Guest) => {
@@ -388,9 +393,11 @@ export default function GuestManager({
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${RSVP_COLORS[guest.rsvp_status] || 'bg-gray-100 text-gray-600'}`}>
-                      {RSVP_LABELS[guest.rsvp_status] || guest.rsvp_status}
-                    </span>
+                    <RsvpStatusControl
+                      guest={guest}
+                      weddingId={weddingId}
+                      onChanged={handleRsvpChanged}
+                    />
                   </td>
                   <td className="px-4 py-3">
                     {guest.allow_plus_one
@@ -480,9 +487,11 @@ export default function GuestManager({
                 }`}>
                 {guest.category}
               </span>
-              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${RSVP_COLORS[guest.rsvp_status]}`}>
-                {RSVP_LABELS[guest.rsvp_status]}
-              </span>
+              <RsvpStatusControl
+                guest={guest}
+                weddingId={weddingId}
+                onChanged={handleRsvpChanged}
+              />
               {relationLabel(guest) && (
                 <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-purple-50 text-purple-700">
                   {relationLabel(guest)}
